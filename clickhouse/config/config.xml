@@ -1,0 +1,31 @@
+<yandex>
+    <logger>
+        <level>trace</level>
+        <log>/var/lib/clickhouse/clickhouse-server.log</log>
+        <errorlog>/var/lib/clickhouse/clickhouse-server.err.log</errorlog>
+        <size>1000M</size>
+        <count>10</count>
+</logger>
+
+
+    <http_port>8123</http_port>
+    <tcp_port>9000</tcp_port>
+    <interserver_http_port>9009</interserver_http_port>
+
+    <listen_host>0.0.0.0</listen_host>
+
+    <path>/var/lib/clickhouse/</path>
+    <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
+    <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
+    <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+    <max_concurrent_queries>1000</max_concurrent_queries>
+
+
+    <users_config>users.xml</users_config>
+
+    <user_directories>
+        <users_xml>
+            <path>users.xml</path>
+        </users_xml>
+    </user_directories>
+</yandex>

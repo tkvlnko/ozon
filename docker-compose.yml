@@ -1,0 +1,90 @@
+version: '3.8'
+
+networks:
+  monitoring:
+    driver: bridge
+
+services:
+  # Consul - Service Discovery
+  consul:
+    image: consul:1.15.4
+    container_name: consul
+    ports:
+      - "8301:8301"
+      - "8500:8500"     # Web UI and API
+      - "8600:8600/tcp" # DNS
+      - "8600:8600/udp" # DNS
+    networks:
+      - monitoring
+    command: agent -data-dir=/consul/data -config-dir=/consul/config -dev -client=0.0.0.0 -bind=0.0.0.0
+    restart: unless-stopped
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    volumes:
+      - ./prometheus/etc:/etc/prometheus
+      - ./prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - consul
+
+  # ClickHouse - Database
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    container_name: clickhouse
+    ports:
+      - "8123:8123"  # HTTP Interface
+      - "9000:9000"  # Native Interface
+    volumes:
+      - ./clickhouse/data:/var/lib/clickhouse
+      - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/custom-config.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/custom-user.xml:ro
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: default
+    networks:
+      - monitoring
+    restart: unless-stopped
+
+  # Grafana - Data Visualization
+  grafana:
+    image: grafana/grafana-oss:9.5.6
+    container_name: grafana
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    networks:
+      - monitoring
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - clickhouse
+
+  microservice:
+    build: ./microservice
+    expose:
+      - "84"            # только внутри monitoring-сети
+    networks:
+      - monitoring
+    deploy:
+      replicas: 3
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  clickhouse_data:
