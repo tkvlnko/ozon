@@ -254,22 +254,26 @@ def main() -> None:
 
     # ClickHouse connection
     try:
-        clickhouse_host = os.getenv("CLICKHOUSE_HOST", "clickhouse-1")
+        # clickhouse_host = os.getenv("CLICKHOUSE_HOST", "clickhouse-1")
         clickhouse_port = int(os.getenv("CLICKHOUSE_PORT", 9000))
+        clickhouse_hosts = [
+            "clickhouse-1",
+            "clickhouse-2",
+            "clickhouse-3",
+            "clickhouse-4",
+        ]
+        ports = [9000, 9000, 9000, 9000]  
+
         client = Client(
-            host=clickhouse_host,
-            port=clickhouse_port,
+            host="clickhouse-1",
+            port=9000,
+            alt_hosts="clickhouse-2:9000,clickhouse-3:9000,clickhouse-4:9000",
+            round_robin=True,
             database="item_upload",
             user="default",
             password="default",
         )
-        print(
-            ">>> Connecting to ClickHouse at",
-            clickhouse_host,
-            clickhouse_port,
-            flush=True,
-        )
-
+        print(f"➡️ Writing to ClickHouse at {clickhouse_hosts}:{ports}")
         # client.execute("DROP DATABASE IF EXISTS item_upload SYNC")
         # client.execute("CREATE DATABASE item_upload ON CLUSTER local_cluster;")
         # client.execute("USE item_upload")
@@ -283,7 +287,7 @@ def main() -> None:
         process_event(ev)
 
         ev_ts_ns = ev["ts_ns"]
-        time.sleep(10)  #### НЕ МЕНЯТЬ ОСТАВИТЬ 10 сек
+        time.sleep(12)  #### НЕ МЕНЯТЬ ОСТАВИТЬ 10 сек
 
 
         try:
@@ -315,7 +319,7 @@ def main() -> None:
                 ],
             )
         except Exception as e:
-            print("❌😭Problem with connection to clickhouse ", e)
+            print("❌😭Problem with connection to clickhouse ", str(e)[:200])
             time.sleep(10)
 
         time.sleep(0.1)
