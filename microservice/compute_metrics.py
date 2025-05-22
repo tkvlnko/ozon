@@ -3,15 +3,17 @@ import requests
 import time
 import random
 import json
+import os
 import threading
 from datetime import datetime
 from config import *
 from clickhouse_driver import Client
 
 
-
 stop_metrics = threading.Event()
 metrics_thread = None
+
+
 # -----------------------------
 # Leader Election Helpers
 # -----------------------------
@@ -72,9 +74,7 @@ def leader_election_loop():
                 on_lose_leadership()
 
             if not renew_session(session_id):
-                print(
-                    f"{socket.gethostname()} session expired, renew", flush=True
-                )
+                print(f"{socket.gethostname()} session expired, renew", flush=True)
                 session_id = create_session()
                 if is_leader:
                     is_leader = False
@@ -92,27 +92,32 @@ def leader_election_loop():
         # time.sleep(RENEW_INTERVAL)
 
 
-
 def compute_metrics():
-    client = Client(host="clickhouse", port=9000, user="default", password="default")
+    # client = Client(host="clickhouse", port=9000, user="default", password="default")
+    host = os.getenv("CLICKHOUSE_HOST", "clickhouse-1")
+    port = int(os.getenv("CLICKHOUSE_PORT", 9000))
+    client = Client(
+        host=host, port=port, user="default", password="default", database="item_upload"
+    )
     while not stop_metrics.is_set():
-        try:
-            save_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='SAVE'"
-            )[0][0]
-            update_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='UPDATE'"
-            )[0][0]
-            error_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='ERROR'"
-            )[0][0]
-            total_count = client.execute("SELECT count() FROM product_load_events")[0][
-                0
-            ]
-            SAVE_GAUGE.set(save_count)
-            UPDATE_GAUGE.set(update_count)
-            ERROR_GAUGE.set(error_count)
-            TOTAL_EVENTS_GAUGE.set(total_count)
-        except Exception as e:
-            print("Error computing metrics:", e, flush=True)
-        stop_metrics.wait(10)
+        # try:
+        #     save_count = client.execute(
+        #         "SELECT count() FROM product_load_events WHERE event='SAVE'"
+        #     )[0][0]
+        #     update_count = client.execute(
+        #         "SELECT count() FROM product_load_events WHERE event='UPDATE'"
+        #     )[0][0]
+        #     error_count = client.execute(
+        #         "SELECT count() FROM product_load_events WHERE event='ERROR'"
+        #     )[0][0]
+        #     total_count = client.execute("SELECT count() FROM product_load_events")[0][
+        #         0
+        #     ]
+        #     SAVE_GAUGE.set(save_count)
+        #     UPDATE_GAUGE.set(update_count)
+        #     ERROR_GAUGE.set(error_count)
+        #     TOTAL_EVENTS_GAUGE.set(total_count)
+        # except Exception as e:
+        #     print("Error computing metrics:", e, flush=True)
+        # stop_metrics.wait(10)
+        pass

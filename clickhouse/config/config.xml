@@ -19,6 +19,7 @@
     <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
     <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
     <max_concurrent_queries>1000</max_concurrent_queries>
+    <include_from>/etc/clickhouse-server/config.d/*.xml</include_from>
 
 
     <users_config>users.xml</users_config>

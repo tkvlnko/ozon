@@ -1,11 +1,8 @@
-version: '3.8'
-
 networks:
   monitoring:
     driver: bridge
 
 services:
-  # Consul - Service Discovery
   consul:
     image: consul:1.15.4
     container_name: consul
@@ -19,7 +16,14 @@ services:
     command: agent -data-dir=/consul/data -config-dir=/consul/config -dev -client=0.0.0.0 -bind=0.0.0.0
     restart: unless-stopped
 
-  # Prometheus - Metrics Collection
+  zookeeper:
+    image: zookeeper:3.8   
+    container_name: zookeeper
+    ports: 
+      - "2181:2181"
+    networks: 
+      - monitoring 
+
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: prometheus
@@ -37,25 +41,72 @@ services:
     depends_on:
       - consul
 
-  # ClickHouse - Database
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: clickhouse
-    ports:
-      - "8123:8123"  # HTTP Interface
-      - "9000:9000"  # Native Interface
-    volumes:
-      - ./clickhouse/data:/var/lib/clickhouse
-      - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/custom-config.xml:ro
-      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/custom-user.xml:ro
-    environment:
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: default
-    networks:
-      - monitoring
+  clickhouse-base: &clickhouse
+    image: clickhouse/clickhouse-server:24.4-alpine
+    depends_on: [ zookeeper ]
     restart: unless-stopped
+    networks:
+      monitoring:
+        aliases:
+          - clickhouse 
+    ports: []
+    volumes:
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
 
-  # Grafana - Data Visualization
+  # -------- SHARD 1 ----------
+  clickhouse-1:
+    <<: *clickhouse
+    container_name: clickhouse-1
+    hostname: clickhouse-1
+    ports: [ "9001:9000", "8124:8123" ]
+    volumes:
+      - ./clickhouse/node01/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-1:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+
+  clickhouse-2:
+    <<: *clickhouse
+    container_name: clickhouse-2
+    hostname: clickhouse-2
+    ports: [ "9002:9000", "8125:8123" ]
+    volumes:
+      - ./clickhouse/node02/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-2:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  # -------- SHARD 2 ----------
+  clickhouse-3:
+    <<: *clickhouse
+    container_name: clickhouse-3
+    hostname: clickhouse-3
+    ports: [ "9003:9000", "8126:8123" ]
+    volumes:
+      - ./clickhouse/node03/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-3:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  clickhouse-4:
+    <<: *clickhouse
+    container_name: clickhouse-4
+    hostname: clickhouse-4
+    ports: [ "9004:9000", "8127:8123" ]
+    volumes:
+      - ./clickhouse/node04/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-4:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  
   grafana:
     image: grafana/grafana-oss:9.5.6
     container_name: grafana
@@ -66,6 +117,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - GF_LOG_LEVEL=error # убираем лишние логи
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
     networks:
@@ -73,18 +125,156 @@ services:
     restart: unless-stopped
     depends_on:
       - prometheus
-      - clickhouse
+      - clickhouse-1
 
   microservice:
     build: ./microservice
+    environment:
+      CLICKHOUSE_HOST: clickhouse-1
+      CLICKHOUSE_PORT: "9000"
     expose:
-      - "84"            # только внутри monitoring-сети
+      - "84"          
     networks:
       - monitoring
+    depends_on:
+      - clickhouse-1
+      - consul
     deploy:
       replicas: 3
+  
+  ch-init:
+    image: clickhouse/clickhouse-server:24.4-alpine
+    networks:
+      - monitoring
+    depends_on:
+      - clickhouse-1
+    volumes:
+      - ./microservice/ddl.sql:/ddl/ddl.sql:ro        # ← именно файл!
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # ждём открытия порта 9000
+        until clickhouse-client \
+          --host clickhouse-1 \
+          --user default \
+          --password default \
+          --query "SELECT 1"; do
+          sleep 1
+        done
+
+        # применяем DDL
+        clickhouse-client \
+          --host clickhouse-1 \
+          --user default \
+          --password default \
+          --multiquery < /ddl/ddl.sql
+    restart: "no"
+
 
 volumes:
   prometheus_data:
   grafana_data:
   clickhouse_data:
+
+  # ClickHouse - Database
+  # clickhouse:
+  #   image: clickhouse/clickhouse-server:head-alpine
+  #   container_name: clickhouse
+  #   ports:
+  #     - "8123:8123"  # HTTP Interface
+  #     - "9000:9000"  # Native Interface
+  #   volumes:
+  #     - ./clickhouse/data:/var/lib/clickhouse
+  #     - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/custom-config.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/custom-user.xml:ro
+  #   environment:
+  #     CLICKHOUSE_USER: default
+  #     CLICKHOUSE_PASSWORD: default
+  #   networks:
+  #     - monitoring
+  #   restart: unless-stopped
+
+# clickhouse-1: &clickhouse
+  #   image: clickhouse/clickhouse-server:head-alpine
+  #   # image: clickhouse/clickhouse-server:24.2.2.17
+  #   hostname: clickhouse-1              # must match the <host> value in cluster.xml
+  #   container_name: clickhouse-1
+    
+  #   environment:
+  #     - SHARD=01
+  #     - REPLICA=01
+  #   volumes:
+  #     - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+  #     - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+  #     - ./clickhouse/config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.xml:ro
+  #     - ./clickhouse/data/clickhouse-1:/var/lib/clickhouse
+  #   # volumes:
+  #   # # ➜ кладём ПОЛНЫЙ config.xml вместо дефолтного
+  #   # - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.xml:ro
+  #   # # ➜ а вот cluster / macros / users – как и раньше, в config.d /
+  #   # - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+  #   # - ./clickhouse/config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+  #   # - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+  #   # - ./clickhouse/data/clickhouse-1:/var/lib/clickhouse
+
+  #   ports: ["9001:9000","8124:8123"]
+  #   networks: 
+  #     monitoring:
+  #       aliases:
+  #           - clickhouse
+  #   depends_on: [ zookeeper ]
+
+  # clickhouse-2:
+  #   <<: *clickhouse
+  #   hostname: clickhouse-2
+  #   container_name: clickhouse-2
+  #   environment: 
+  #     - SHARD=01
+  #     - REPLICA=02 
+  #   volumes:
+  #     - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+  #     - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+  #     - ./clickhouse/config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.xml:ro
+  #     - ./clickhouse/data/clickhouse-2:/var/lib/clickhouse
+
+  #   ports: ["9002:9000","8125:8123"]
+
+  # clickhouse-3:
+  #   <<: *clickhouse
+  #   hostname: clickhouse-3
+  #   container_name: clickhouse-3
+  #   environment: 
+  #     - SHARD=02
+  #     - REPLICA=01 
+  #   volumes:
+  #     - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+  #     - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+  #     - ./clickhouse/config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.xml:ro
+  #     - ./clickhouse/data/clickhouse-3:/var/lib/clickhouse
+
+  #   ports: ["9003:9000","8126:8123"]
+
+  # clickhouse-4:
+  #   <<: *clickhouse
+  #   container_name: clickhouse-4
+  #   hostname: clickhouse-4
+  #   environment:
+  #     - SHARD=02
+  #     - REPLICA=02 
+  #   volumes:
+  #     - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
+  #     - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+  #     - ./clickhouse/config/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+  #     - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.xml:ro
+  #     - ./clickhouse/data/clickhouse-4:/var/lib/clickhouse
+  #   ports: ["9004:9000","8127:8123"]
+
+  # Grafana - Data Visualization
