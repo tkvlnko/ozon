@@ -8,4 +8,4 @@ COPY . .
 
 RUN pip install --no-cache-dir clickhouse-driver prometheus_client requests 
 
-CMD ["python", "simulate_data_5.py"]
+CMD ["python", "simulate_data.py"]

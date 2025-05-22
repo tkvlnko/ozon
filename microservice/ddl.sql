@@ -56,14 +56,7 @@ ON CLUSTER local_cluster
     (
         'item_upload',
         'company_statistic_daily',
-        1,
-        10,
-        100,
-        10000,
-        100,
-        10000000,
-        112000000
-    );
+        1, 10, 10, 100, 1000000, 10000000, 112000000);
 
 
 CREATE TABLE IF NOT EXISTS item_upload.company_statistic_status_daily 
@@ -329,25 +322,27 @@ GROUP BY
 CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_attempt_create_time 
 ON CLUSTER local_cluster
 TO item_upload.attempt_create_time AS
-SELECT toDateTime64(min(csd.ts), 6) AS date_create,
-    csd.item_id AS item_id,
-    csd.company_id AS company_id,
-    csd.country AS country,
-    csd.origin AS origin,
-    cssd.is_created AS is_created,
-    IF(
-        cssd.is_created,
-        (max(cssd.up_ts) - min(csd.ts)) / 1e9,
-        0
-    ) AS attempt,
-    (max(csd.ts) - min(csd.ts)) / 1e9 AS full_time
-FROM item_upload.company_statistic_status_daily cssd
-    JOIN item_upload.company_statistic_daily csd ON cssd.item_id = csd.item_id
-GROUP BY csd.item_id,
+SELECT
+    fromUnixTimestamp64Nano(min(csd.ts))        AS date_create,
+    csd.item_id                                 AS item_id,
+    csd.company_id                              AS company_id,
+    csd.country                                  AS country,
+    csd.origin                                  AS origin,
+    any(cssd.is_created)                        AS is_created,
+    if(
+      any(cssd.is_created),
+      ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) ) / 1e9,
+      0
+    )                                           AS attempt,
+    (max(csd.ts) - min(csd.ts)) / 1e9           AS full_time
+FROM item_upload.company_statistic_daily        csd
+LEFT JOIN item_upload.company_statistic_status_daily cssd
+  ON csd.item_id = cssd.item_id
+GROUP BY
+    csd.item_id,
     csd.company_id,
     csd.country,
-    csd.origin,
-    cssd.is_created;
+    csd.origin;
 
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_item_change_log_stat 

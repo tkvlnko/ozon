@@ -13,7 +13,7 @@ from config import SAVE_COUNTER, UPDATE_COUNTER, ERROR_COUNTER
 from compute_metrics import leader_election_loop
 
 _last_debug_time = 0.0
-_debug_interval = 3.0 
+_debug_interval = 3.0
 
 ITEM_POOL = [random.randint(1_000_000_000, 9_999_999_999) for _ in range(10_000)]
 item_attempts = {}
@@ -90,8 +90,8 @@ def simulate_event():
 
     url_by_media: dict[str, int] = {}
     for url in media_files:
-        ext = url.rsplit(".", 1)[-1]   
-        key = f"{ext}:{url}"   
+        ext = url.rsplit(".", 1)[-1]
+        key = f"{ext}:{url}"
         url_by_media[key] = url_by_media.get(key, 0) + 1
 
     data = json.dumps(
@@ -262,7 +262,7 @@ def main() -> None:
             "clickhouse-3",
             "clickhouse-4",
         ]
-        ports = [9000, 9000, 9000, 9000]  
+        ports = [9000, 9000, 9000, 9000]
 
         client = Client(
             host="clickhouse-1",
@@ -287,12 +287,11 @@ def main() -> None:
         process_event(ev)
 
         ev_ts_ns = ev["ts_ns"]
-        time.sleep(12)  #### НЕ МЕНЯТЬ ОСТАВИТЬ 10 сек
-
+        # time.sleep(12)  #### НЕ МЕНЯТЬ ОСТАВИТЬ 10 сек
 
         try:
             client.execute(
-                "INSERT INTO company_statistic_daily_buffer VALUES",
+                "INSERT INTO item_upload.company_statistic_daily_buffer VALUES",
                 [
                     (
                         ev_ts_ns,
