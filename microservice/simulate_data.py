@@ -148,17 +148,15 @@ def main() -> None:
     threading.Thread(target=leader_election_loop, daemon=True).start()
 
     try:
-
+        chosen_shard = random.choice(["clickhouse-1", "clickhouse-2", "clickhouse-3", "clickhouse-4"])
         client = Client(
-            host="clickhouse-1",
+            host=chosen_shard,
             port=9000,
-            alt_hosts="clickhouse-2:9000,clickhouse-3:9000,clickhouse-4:9000",
-            round_robin=True,
             database="item_upload",
             user="default",
             password="default",
         )
-        logger.info(f"➡️ Writing to ClickHouse")
+        logger.info(f"➡️ Writing to ClickHouse: {chosen_shard}")
     except Exception as e:
         logger.exception("❌ Trying to connect to ClickHouse")
 
@@ -166,54 +164,35 @@ def main() -> None:
         ev = simulate_event()
         process_event(ev)
         try:
-            # из-за того что два экзекьта были данные шли в разные шарды и на графике не было видно
-            # client.execute(
-            #     "INSERT INTO item_upload.company_statistic_daily_buffer VALUES",
-            #     [
-            #         (
-            #             ev["ts_ns"],
-            #             ev["item_id"],
-            #             ev["company_id"],
-            #             ev["category_id"],
-            #             ev["origin"],
-            #             ev["media"],
-            #             ev["country"],
-            #             ev["url_by_media"],
-            #         )
-            #     ],
-            # )
-            # client.execute(
-            #     "INSERT INTO item_upload.company_statistic_status_daily_buffer VALUES",
-            #     [
-            #         (
-            #             ev["ts_ns"],
-            #             ev["item_id"],
-            #             ev["event"] == "SAVE",
-            #             ev["up_ts"],
-            #         )
-            #     ],
-            # )
-            client.execute("""
-                INSERT INTO item_upload.company_statistic_daily_buffer VALUES (
-                    %(ts)s, %(item_id)s, %(company_id)s, %(category_id)s,
-                    %(origin)s, %(media)s, %(country)s, %(url_by_media)s
-                );
+            client.execute(
+                "INSERT INTO item_upload.company_statistic_daily_buffer VALUES",
+                [
+                    (
+                        ev["ts_ns"],
+                        ev["item_id"],
+                        ev["company_id"],
+                        ev["category_id"],
+                        ev["origin"],
+                        ev["media"],
+                        ev["country"],
+                        ev["url_by_media"],
+                    )
+                ],
+            )
+            client.execute(
+                "INSERT INTO item_upload.company_statistic_status_daily_buffer VALUES",
+                [
+                    (
+                        ev["ts_ns"],
+                        ev["item_id"],
+                        ev["event"] == "SAVE",
+                        ev["up_ts"],
+                    )
+                ],
+            )
 
-                INSERT INTO item_upload.company_statistic_status_daily_buffer VALUES (
-                    %(ts)s, %(item_id)s, %(is_created)s, %(up_ts)s
-                );
-            """, {
-                "ts": ev["ts_ns"],
-                "item_id": ev["item_id"],
-                "company_id": ev["company_id"],
-                "category_id": ev["category_id"],
-                "origin": ev["origin"],
-                "media": ev["media"],
-                "country": ev["country"],
-                "url_by_media": ev["url_by_media"],
-                "is_created": ev["event"] == "SAVE",
-                "up_ts": ev["up_ts"]
-            })
+
+
         except Exception as e:
             logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")
             time.sleep(10)
