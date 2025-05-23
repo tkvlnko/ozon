@@ -8,7 +8,7 @@ import threading
 from datetime import datetime
 from config import *
 from clickhouse_driver import Client
-
+from config import logger
 
 stop_metrics = threading.Event()
 metrics_thread = None

@@ -1,5 +1,5 @@
 from prometheus_client import Counter, Gauge
-
+import logging
 
 CONSUL = "http://consul:8500"
 LEADER_KEY = "microservice/leader"
@@ -19,3 +19,10 @@ ERROR_GAUGE = Gauge("error_events_clickhouse", "Count of ERROR events in ClickHo
 TOTAL_EVENTS_GAUGE = Gauge(
     "total_events_clickhouse", "Total count of events in ClickHouse"
 )
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+logger = logging.getLogger(__name__)

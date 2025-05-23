@@ -345,34 +345,29 @@ GROUP BY
     csd.origin;
 
 
-CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_item_change_log_stat 
+CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_item_change_log_stat
 ON CLUSTER local_cluster
-TO item_upload.item_change_log_stat AS
-SELECT toUnixTimestamp64Nano(
+TO item_upload.item_change_log_stat
+AS
+SELECT
+    toUnixTimestamp64Nano(
         toDateTime64(
-            toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 day),
+            toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 DAY),
             6
         )
     ) AS ts,
     csd.company_id,
     csd.country,
-    uniqMapState(
-        if(
-            cssd.is_created,
-            map(csd.origin, csd.item_id),
-            map()
-        )
-    ) AS itemOrigins,
-    uniqMapState(
-        if(
-            NOT cssd.is_created,
-            map(csd.origin, csd.item_id),
-            map()
-        )
-    ) AS tryItemOrigins,
-    uniqMapState(map(csd.origin, csd.item_id)) AS origins
-FROM item_upload.company_statistic_status_daily cssd
-    JOIN item_upload.company_statistic_daily csd ON cssd.item_id = csd.item_id
-GROUP BY ts,
+
+    uniqMapState( map(csd.origin, csd.item_id) )                          AS origins,
+    uniqMapState( if(cssd.is_created, map(csd.origin, csd.item_id), map()) )      AS itemOrigins,
+    uniqMapState( if(not cssd.is_created, map(csd.origin, csd.item_id), map()) )  AS tryItemOrigins
+
+FROM item_upload.company_statistic_status_daily AS cssd
+INNER JOIN item_upload.company_statistic_daily      AS csd
+    ON cssd.item_id = csd.item_id
+GROUP BY
+    ts,
     csd.company_id,
-    csd.country;
+    csd.country
+;

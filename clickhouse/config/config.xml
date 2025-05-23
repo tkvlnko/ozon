@@ -6,6 +6,9 @@
         <size>1000M</size>
         <count>10</count>
 </logger>
+<allow_experimental_map_type>1</allow_experimental_map_type>
+    <allow_experimental_aggregate_functions_map>1</allow_experimental_aggregate_functions_map>
+   
 
 
     <http_port>8123</http_port>
