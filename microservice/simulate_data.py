@@ -136,7 +136,6 @@ def process_event(event: dict[str, str]) -> None:
         ERROR_COUNTER.inc()
 
 
-
 def main() -> None:
     logger.info("🕒 Time sleep begun")
     time.sleep(25)
@@ -148,7 +147,9 @@ def main() -> None:
     threading.Thread(target=leader_election_loop, daemon=True).start()
 
     try:
-        chosen_shard = random.choice(["clickhouse-1", "clickhouse-2", "clickhouse-3", "clickhouse-4"])
+        chosen_shard = random.choice(
+            ["clickhouse-1", "clickhouse-2", "clickhouse-3", "clickhouse-4"]
+        )
         client = Client(
             host=chosen_shard,
             port=9000,
@@ -190,8 +191,6 @@ def main() -> None:
                     )
                 ],
             )
-
-
 
         except Exception as e:
             logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")

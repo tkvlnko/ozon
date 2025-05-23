@@ -42,7 +42,9 @@ def acquire_lock(session_id):
         )
         res.raise_for_status()
         got = res.json()
-        logger.debug(f"🔐 Lock {'acquired' if got else 'not acquired'} for session {session_id}")
+        logger.debug(
+            f"🔐 Lock {'acquired' if got else 'not acquired'} for session {session_id}"
+        )
         return got
     except Exception as e:
         logger.exception("❌ Failed to acquire lock")
@@ -53,7 +55,9 @@ def renew_session(session_id):
     try:
         res = requests.put(f"{CONSUL}/v1/session/renew/{session_id}")
         success = res.status_code == 200
-        logger.debug(f"🔄 Renew session {session_id} {'succeeded' if success else 'failed'}")
+        logger.debug(
+            f"🔄 Renew session {session_id} {'succeeded' if success else 'failed'}"
+        )
         return success
     except Exception as e:
         logger.exception("❌ Error renewing session")
@@ -67,12 +71,16 @@ def on_become_leader():
     stop_metrics.clear()
     metrics_thread = threading.Thread(target=compute_metrics, daemon=True)
     metrics_thread.start()
-    logger.info(f"👑 {socket.gethostname()} → became LEADER and started compute_metrics")
+    logger.info(
+        f"👑 {socket.gethostname()} → became LEADER and started compute_metrics"
+    )
 
 
 def on_lose_leadership():
     stop_metrics.set()
-    logger.warning(f"👋 {socket.gethostname()} → lost leadership and stopped compute_metrics")
+    logger.warning(
+        f"👋 {socket.gethostname()} → lost leadership and stopped compute_metrics"
+    )
 
 
 def leader_election_loop():

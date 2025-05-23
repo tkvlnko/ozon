@@ -2,6 +2,7 @@ import socket
 import requests
 from config import logger
 
+
 def register_to_consul():
     instance_id = socket.gethostname()
     svc = {
