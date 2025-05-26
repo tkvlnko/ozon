@@ -6,12 +6,12 @@ import json
 import threading
 from datetime import datetime
 from prometheus_client import start_http_server
-from clickhouse_driver import Client
+
 
 from register_to_consul import register_to_consul
-from config import SAVE_COUNTER, UPDATE_COUNTER, ERROR_COUNTER, logger
+from config import logger
 from compute_metrics import leader_election_loop
-
+from connect import get_client
 
 _last_debug_time = 0.0
 _debug_interval = 3.0
@@ -48,16 +48,30 @@ def simulate_event():
     production_countries = ["CN", "US", "RU", "DE"]
     production_country = random.choice(production_countries)
 
+    def generate_media_url() -> str:
+        domain_type = random.choices(
+            ["our", "external", "bad"],
+            weights=[0.5, 0.4, 0.1],  # можно менять веса
+            k=1
+        )[0]
+
+        file_id = random.randint(100000, 999999)
+
+        if domain_type == "our":
+            domain = random.choice(["ozone.ru", "ozonusercontent.com"])
+        elif domain_type == "bad":
+            domain = "bad_hostname"
+        else:
+            domain = random.choice(["imgur.com", "unsplash.com", "cdn.otherhost.net", "example.com"])
+
+        return f"https://cdn.{domain}/{file_id}.jpg"
+
+    # Генерация списка
     num_media_files = random.randint(0, 5)
     has_media = random.choice([True, False])
-    media_files = (
-        [
-            f"https://cdn.example.com/{random.randint(100000,999999)}.jpg"
-            for _ in range(num_media_files)
-        ]
-        if has_media
-        else []
-    )
+
+    media_files = [generate_media_url() for _ in range(num_media_files)] if has_media else []
+
 
     attempt_count = len(item_attempts[item_id])
     if attempt_count >= 3:
@@ -108,7 +122,7 @@ def simulate_event():
         up_ts = 0
 
     return {
-        "item_id": random.randint(1000000000, 9999999999),
+        "item_id": item_id,
         "ts_ns": ts_ns,
         "event": event_type,
         "attempt_id": attempt_id,
@@ -127,13 +141,14 @@ def simulate_event():
 
 
 def process_event(event: dict[str, str]) -> None:
-    t = event.get("event")
-    if t == "SAVE":
-        SAVE_COUNTER.inc()
-    elif t == "UPDATE":
-        UPDATE_COUNTER.inc()
-    elif t == "ERROR":
-        ERROR_COUNTER.inc()
+    #     t = event.get("event")
+    #     if t == "SAVE":
+    #         SAVE_COUNTER.inc()
+    #     elif t == "UPDATE":
+    #         UPDATE_COUNTER.inc()
+    #     elif t == "ERROR":
+    #         ERROR_COUNTER.inc()
+    pass
 
 
 def main() -> None:
@@ -144,20 +159,10 @@ def main() -> None:
     logger.info("📊 Prometheus metrics server started on port 84")
 
     register_to_consul()
-    threading.Thread(target=leader_election_loop, daemon=True).start()
+    # threading.Thread(target=leader_election_loop, daemon=True).start()
 
     try:
-        chosen_shard = random.choice(
-            ["clickhouse-1", "clickhouse-2", "clickhouse-3", "clickhouse-4"]
-        )
-        client = Client(
-            host=chosen_shard,
-            port=9000,
-            database="item_upload",
-            user="default",
-            password="default",
-        )
-        logger.info(f"➡️ Writing to ClickHouse: {chosen_shard}")
+        client = get_client()
     except Exception as e:
         logger.exception("❌ Trying to connect to ClickHouse")
 

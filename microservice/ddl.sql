@@ -334,7 +334,15 @@ SELECT
       ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) ) / 1e9,
       0
     )                                           AS attempt,
-    ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) )/1e9 AS full_time
+    greatest(
+  if(
+    any(cssd.is_created) AND maxIf(cssd.up_ts, cssd.is_created) > 0,
+    ( maxIf(cssd.up_ts, cssd.is_created) - minIf(csd.ts, cssd.is_created) ) / 1e9,
+    0
+  ),
+  0
+) AS full_time
+
     
 FROM item_upload.company_statistic_daily        csd
 LEFT JOIN item_upload.company_statistic_status_daily cssd

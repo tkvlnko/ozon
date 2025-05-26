@@ -144,7 +144,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"среднее время\",\n    stddevPop(attempt) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
+          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"среднее время\",\n    stddevPop(attempt) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
           "refId": "A"
         }
       ],
@@ -308,7 +308,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"среднее время\",\n    stddevPop(attempt) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
+          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"среднее время\",\n    stddevPop(attempt) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
           "refId": "A"
         }
       ],
@@ -416,7 +416,7 @@
           },
           "pluginVersion": "4.8.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"среднее время\",\n    stddevPop(full_time) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
+          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"среднее время\",\n    stddevPop(full_time) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
           "refId": "A"
         }
       ],
@@ -508,7 +508,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"среднее время\",\n    stddevPop(full_time) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
+          "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"среднее время\",\n    stddevPop(full_time) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
           "refId": "A"
         },
         {
@@ -531,8 +531,8 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n    t0.newTS,\n    (t0.allItems-t0.tryFirst)/t2.items \"Товаров больше одной попытки\"\nfrom\n(Select\n    fromUnixTimestamp64Nano(csm.ts) newTS,\n    uniqMerge(first_time) tryFirst,\n    arraySum(mapValues(uniqMapMerge(csm.origins))) allItems\nfrom company_statistic_monthly csm\nwhere $__timeFilter(newTS)\ngroup by newTS) t0 left join (select\n newTS,\n sum(originRow.2) items\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    $__timeFilter(newTS)\ngroup by newTS) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS) t2 on t0.newTS = t2.newTS\nwhere t0.newTS >= '2024-10-04'",
-          "refId": "B"
+          "rawSql": "SELECT\n    t0.newTS,\n    (t0.allItems - t0.tryFirst) / t2.items AS \"Товаров больше одной попытки\"\nFROM\n(\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 day) AS newTS,\n        countDistinctIf(csd.item_id, cssd.is_created) AS tryFirst,\n        countDistinct(csd.item_id) AS allItems\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL INNER JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE fromUnixTimestamp64Nano(csd.ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY newTS\n) AS t0\nLEFT JOIN\n(\n    SELECT\n        newTS,\n        sum(originRow.2) AS items\n    FROM (\n        SELECT\n            toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n            arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n        GROUP BY newTS\n    ) AS t\n    WHERE t.originRow.1 NOT LIKE '%update/%'\n    GROUP BY newTS\n) AS t2\nON t0.newTS = t2.newTS\n",
+      "refId": "B"
         }
       ],
       "timeFrom": "1d",
@@ -648,7 +648,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "WITH\n    avg(attempt) AS mean_time,\n    stddevPop(attempt) AS stddev_time,\n    mean_time + 3 * stddev_time AS threshold\nSELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    count(if(attempt > (SELECT mean_time + 3 * stddev_time FROM attempt_create_time where $__timeFilter(date_create)),1,null)) / count(*) * 100 \"товаров больше границы\"\nFROM\n    attempt_create_time\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
+          "rawSql": "WITH\n    (\n        SELECT\n            avg(attempt) AS mean_time,\n            stddevPop(attempt) AS stddev_time\n        FROM attempt_create_time\n        WHERE $__timeFilter(date_create)\n    ) AS stats\n\nSELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) AS at,\n    countIf(attempt > (stats.mean_time + 3 * stats.stddev_time)) * 100.0 / count() AS \"товаров больше границы\"\nFROM attempt_create_time\nWHERE $__timeFilter(date_create)\nGROUP BY at\n",
           "refId": "A"
         }
       ],
@@ -733,7 +733,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "table",
-          "rawSql": "WITH\n    quantileTiming(0.90)(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * -100 AS \"По количеству\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
+          "rawSql": "WITH\n    quantileTiming(0.90)(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * -100 AS \"По количеству\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time_all\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
           "refId": "A"
         },
         {
@@ -756,7 +756,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "table",
-          "rawSql": "WITH\n    avg(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * 100 AS \"По времени\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
+          "rawSql": "WITH\n    avg(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * 100 AS \"По времени\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time_all\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
           "refId": "B"
         }
       ],
@@ -873,7 +873,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "table",
-          "rawSql": "with\n  avg(cnt) as average_products,\n  stddevPop(cnt) AS standard_deviation,\n  average_products + 1 * standard_deviation AS upper_bound,\n  average_products - 1 * standard_deviation AS lower_bound_orig\nselect\n    toStartOfHour(hour) AS hour,\n    upper_bound \"верхняя граница\",\n    if(lower_bound_orig >= 0,  lower_bound_orig, 0) \"нижняя граница\"\nfrom\n    (SELECT\n        toStartOfMinute(date_create) AS hour,\n        uniq(item_id) cnt\n    FROM\n        attempt_create_time\n    WHERE\n        $__timeFilter(date_create)\n        and is_created\n    Group by hour\n    ORDER BY\n        hour) t0\nGroup by hour\nORDER BY\n    hour;",
+          "rawSql": "with\n  avg(cnt) as average_products,\n  stddevPop(cnt) AS standard_deviation,\n  average_products + 1 * standard_deviation AS upper_bound,\n  average_products - 1 * standard_deviation AS lower_bound_orig\nselect\n    toStartOfHour(hour) AS hour,\n    upper_bound \"верхняя граница\",\n    if(lower_bound_orig >= 0,  lower_bound_orig, 0) \"нижняя граница\"\nfrom\n    (SELECT\n        toStartOfMinute(date_create) AS hour,\n        uniq(item_id) cnt\n    FROM\n        attempt_create_time_all\n    WHERE\n        $__timeFilter(date_create)\n        and is_created\n    Group by hour\n    ORDER BY\n        hour) t0\nGroup by hour\nORDER BY\n    hour;",
           "refId": "A"
         },
         {
@@ -896,7 +896,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "table",
-          "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time\n    WHERE\n        is_created\n    Group by at\n    ORDER BY\n        at",
+          "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time_all\n    WHERE\n        is_created\n    Group by at\n    ORDER BY\n        at",
           "refId": "B"
         }
       ],
@@ -1004,7 +1004,7 @@
           },
           "pluginVersion": "4.5.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        if(country != 'RU', 'Глобал', 'РФ') as \"Сегмент\",\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time\n    WHERE\n        is_created\n    Group by at, \"Сегмент\"\n    ORDER BY\n        at, \"Сегмент\"",
+          "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        if(country != 'RU', 'Глобал', 'РФ') as \"Сегмент\",\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time_all\n    WHERE\n        is_created\n    Group by at, \"Сегмент\"\n    ORDER BY\n        at, \"Сегмент\"",
           "refId": "B"
         }
       ],
@@ -1158,8 +1158,8 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n    t0.newTS,\n    t0.tryFirst/t2.items \"С первой попытки\",\n    t0.allItems/t2.items \"Добавлено на полку\",\n    t0.tryFirst \"Количество с первой попытки\",\n    t0.allItems \"Количество добавленных на полку\"\nfrom\n(Select\n    fromUnixTimestamp64Nano(csm.ts) newTS,\n    uniqMerge(first_time) tryFirst,\n    arraySum(mapValues(uniqMapMerge(csm.origins))) allItems\nfrom company_statistic_monthly csm\nwhere $__timeFilter(newTS)\ngroup by newTS) t0 left join (select\n newTS,\n sum(originRow.2) items\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    $__timeFilter(newTS)\ngroup by newTS) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS) t2 on t0.newTS = t2.newTS\nwhere t0.newTS >= '2024-10-04'",
-          "refId": "A"
+          "rawSql": "SELECT\n    t0.newTS,\n    t0.tryFirst / t2.items AS \"С первой попытки\",\n    t0.allItems / t2.items AS \"Добавлено на полку\",\n    t0.tryFirst AS \"Количество с первой попытки\",\n    t0.allItems AS \"Количество добавленных на полку\"\nFROM\n(\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 day) AS newTS,\n        uniqIf(csd.item_id, cssd.is_created) AS tryFirst,\n        countDistinct(csd.item_id) AS allItems\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL INNER JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE $__timeFilter(csd.ts)\n    GROUP BY newTS\n) AS t0\nLEFT JOIN\n(\n    SELECT\n        newTS,\n        sum(originRow.2) AS items\n    FROM\n    (\n        SELECT\n            toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n            arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE $__timeFilter(ts)\n        GROUP BY newTS\n    ) AS t\n    WHERE t.originRow.1 NOT LIKE '%update/%'\n    GROUP BY newTS\n) AS t2\nON t0.newTS = t2.newTS\nWHERE t0.newTS >= toDateTime('2024-10-04')\n",
+      "refId": "A"
         }
       ],
       "title": "Процент созданных товаров с первой и более попыток ",
@@ -1272,7 +1272,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
+          "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
           "refId": "A"
         }
       ],
@@ -1370,7 +1370,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
+          "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
           "refId": "A"
         }
       ],
@@ -1493,8 +1493,8 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "timeseries",
-          "rawSql": "select\n    newTS,\n    media_type \"Тип медиа\",\n    sum(if(match(media_url, '.*?(ozone\\.ru|ozonusercontent\\.com)$'), cnt_media, 0)) \"Количество наших\",\n    sum(if(match(media_url, '.*?(ozone\\.ru|ozonusercontent\\.com|bad_hostname)$'), 0, cnt_media)) \"Количество внешних\",\n    sum(if(match(media_url, '.*?(bad_hostname)$'), cnt_media, 0)) \"Количество плохих ссылок\"\nfrom\n    (select\n    newTS,\n    splitByString(':', medias.1) media_array,\n    media_array[1] media_type,\n    media_array[2] media_url,\n    medias.2 cnt_media\n    from\n        (Select\n             fromUnixTimestamp64Nano(csm.ts) newTS,\n             arrayJoin(sumMapMerge(csm.media)) medias\n         from company_statistic_monthly csm\n         where newTS >= '2024-11-23'\n         group by newTS) t)\ngroup by newTS, media_type\norder by newTS, media_type;",
-          "refId": "A"
+          "rawSql": "SELECT\n    newTS,\n    media_type AS \"Тип медиа\",\n    sum(if(match(media_url, '.*?(ozone\\\\.ru|ozonusercontent\\\\.com)$'), cnt_media, 0)) AS \"Количество наших\",\n    sum(if(match(media_url, '.*?(ozone\\\\.ru|ozonusercontent\\\\.com|bad_hostname)$'), 0, cnt_media)) AS \"Количество внешних\",\n    sum(if(match(media_url, '.*?(bad_hostname)$'), cnt_media, 0)) AS \"Количество плохих ссылок\"\nFROM (\n    SELECT\n        fromUnixTimestamp64Nano(csm.ts) AS newTS,\n        splitByString(':', media_entry.1) AS media_array,\n        media_array[1] AS media_type,\n        media_entry.1 AS media_key,\n        media_entry.2 AS cnt_media,\n        replaceOne(media_entry.1, concat(media_array[1], ':'), '') AS media_url\n    FROM item_upload.company_statistic_daily_all AS csm\n    ARRAY JOIN url_by_media AS media_entry\n) t\nGROUP BY newTS, media_type\nORDER BY newTS, media_type\n",
+      "refId": "A"
         }
       ],
       "title": "Загружено медиа файлов",
@@ -1580,7 +1580,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n    uniq(company_id)\n          from company_statistic_monthly\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)",
+          "rawSql": "select\n    uniq(company_id)\n          from company_statistic_daily_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)",
           "refId": "A"
         }
       ],
@@ -1654,7 +1654,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) newTS,\n    uniq(company_id) \"Новых продавцов\"\nfrom\n    company_statistic_monthly\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)\n    and company_id > (select max(company_id) from company_statistic_monthly where fromUnixTimestamp64Nano(ts) < toStartOfInterval(now(), interval 1 day))\ngroup by\n    newTS\norder by newTS",
+          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) newTS,\n    uniq(company_id) \"Новых продавцов\"\nfrom\n    company_statistic_daily_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)\n    and company_id > (select max(company_id) from company_statistic_daily_all where fromUnixTimestamp64Nano(ts) < toStartOfInterval(now(), interval 1 day))\ngroup by\n    newTS\norder by newTS",
           "refId": "A"
         }
       ],
@@ -1728,8 +1728,8 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n uniq(company_id)\nfrom \n(select\n    company_id,\n    sum(c1) frst,\n    sum(arraySum(mapValues(c2))) al\nfrom (select\n          company_id,\n    uniqMerge(first_time) c1,\n      mapFilter((k, v) -> (k not like '%update/%'), uniqMapMerge(origins)) c2\n          from company_statistic_monthly\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)\n    group by company_id) t0\ngroup by company_id\nhaving frst = al) t",
-          "refId": "A"
+          "rawSql": "SELECT uniq(company_id)\nFROM (\n    SELECT\n        csd.company_id,\n        uniqIf(csd.item_id, cssd.is_created) AS frst,\n        countIf(origin NOT LIKE '%update/%') AS al\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE fromUnixTimestamp64Nano(csd.ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY csd.company_id\n    HAVING frst = al\n) t\n",
+      "refId": "A"
         }
       ],
       "title": "Уникальных продавцов с первого раза",
@@ -1802,8 +1802,8 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n    uniq(company_id)\nfrom\n(select\n    company_id,\n    arraySum(mapValues(uniqMapMerge(tryItemOrigins))) c1,\n    arraySum(mapValues(uniqMapMerge(itemOrigins))) c2\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)\ngroup by company_id) t\nhaving c1 = c2;",
-          "refId": "A"
+          "rawSql": "SELECT uniq(company_id)\nFROM (\n    SELECT\n        company_id,\n        arraySum(mapValues(uniqMapMerge(tryItemOrigins))) AS c1,\n        arraySum(mapValues(uniqMapMerge(itemOrigins))) AS c2\n    FROM item_change_log_stat_all\n    WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY company_id\n    HAVING c1 = c2\n) t\n",
+      "refId": "A"
         }
       ],
       "title": "Уникальных продавцов \"потрачено\" ",
@@ -1876,7 +1876,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(tryOrigins))) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
+          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(itemOrigins))) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
           "refId": "A"
         }
       ],
@@ -1950,7 +1950,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(itemOrigins),uniqMapMerge(tryItemOrigins))) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
+          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(itemOrigins),uniqMapMerge(tryItemOrigins))) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
           "refId": "A"
         }
       ],
@@ -2024,7 +2024,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(uniqMapMerge(tryOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t",
+          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t",
           "refId": "A"
         }
       ],
@@ -2098,7 +2098,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(tryItemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t",
+          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(tryItemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t",
           "refId": "A"
         }
       ],
@@ -2177,7 +2177,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(origins)) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
+          "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(origins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
           "refId": "A"
         }
       ],
@@ -2281,7 +2281,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
+          "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
           "refId": "A"
         }
       ],
@@ -2398,7 +2398,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n  fromUnixTimestamp64Nano(ts) newTS,\n  uniq(company_id) \"Уникальных продавцов\"\nfrom \n  company_statistic_monthly\nwhere\n    $__dateFilter(newTS)\ngroup by\n  newTS\norder by newTS  ",
+          "rawSql": "select\n  fromUnixTimestamp64Nano(ts) newTS,\n  uniq(company_id) \"Уникальных продавцов\"\nfrom \n  company_statistic_daily_all\nwhere\n    $__dateFilter(newTS)\ngroup by\n  newTS\norder by newTS  ",
           "refId": "A"
         },
         {
@@ -2421,7 +2421,7 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n newTS,\n uniqIf(company_id, frst = al) \"Продавцов с первого раза\",\n uniqIf(company_id, frst = 0 ) \"Продавцов более одного раза\"\nfrom \n(select\n    newTS,\n    company_id,\n    sum(c1) frst,\n    sum(arraySum(mapValues(c2))) al\nfrom (select\n        fromUnixTimestamp64Nano(ts) newTS,\n        company_id,\n        uniqMerge(first_time) c1,\n        mapFilter((k, v) -> (k not like '%update/%'), uniqMapMerge(origins)) c2\n      from company_statistic_monthly\n      where\n        $__dateFilter(newTS)\n      group by newTS, company_id) t0\ngroup by newTS, company_id) t\ngroup by newTS",
+          "rawSql": "select\n newTS,\n uniqIf(company_id, frst = al) \"Продавцов с первого раза\",\n uniqIf(company_id, frst = 0 ) \"Продавцов более одного раза\"\nfrom \n(select\n    newTS,\n    company_id,\n    sum(c1) frst,\n    sum(arraySum(mapValues(c2))) al\nfrom (select\n        fromUnixTimestamp64Nano(ts) newTS,\n        company_id,\n        uniqMerge(first_time) c1,\n        mapFilter((k, v) -> (k not like '%update/%'), uniqMapMerge(origins)) c2\n      from company_statistic_daily_all\n      where\n        $__dateFilter(newTS)\n      group by newTS, company_id) t0\ngroup by newTS, company_id) t\ngroup by newTS",
           "refId": "B"
         }
       ],
@@ -2528,7 +2528,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    attempts \"Попыток\",\n    originAttempts \"Попыток по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(origins))) attempts,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) originAttempts,\n    row_number() OVER (PARTITION BY newTS ORDER BY attempts DESC) AS rankAttempts\nfrom item_change_log_stat\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankAttempts <= 10\norder by  t.newTS DESC, rankAttempts\nlimit 100",
+          "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    attempts \"Попыток\",\n    originAttempts \"Попыток по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(origins))) attempts,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) originAttempts,\n    row_number() OVER (PARTITION BY newTS ORDER BY attempts DESC) AS rankAttempts\nfrom item_change_log_stat_all\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankAttempts <= 10\norder by  t.newTS DESC, rankAttempts\nlimit 100",
           "refId": "A"
         }
       ],
@@ -2635,7 +2635,7 @@
           },
           "pluginVersion": "4.4.0",
           "queryType": "table",
-          "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    items \"Товаров\",\n    originItems \"Товаров по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(itemOrigins))) items,\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) originItems,\n    row_number() OVER (PARTITION BY newTS ORDER BY items DESC) AS rankItems\nfrom item_change_log_stat\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankItems <= 10\norder by  t.newTS DESC, rankItems\nlimit 100",
+          "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    items \"Товаров\",\n    originItems \"Товаров по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(itemOrigins))) items,\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) originItems,\n    row_number() OVER (PARTITION BY newTS ORDER BY items DESC) AS rankItems\nfrom item_change_log_stat_all\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankItems <= 10\norder by  t.newTS DESC, rankItems\nlimit 100",
           "refId": "A"
         }
       ],
@@ -2759,7 +2759,7 @@
           },
           "pluginVersion": "4.8.0",
           "queryType": "table",
-          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) At,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) \"Попыток по источникам\",\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) \"Товаров по источникам\"\nfrom item_change_log_stat\nWHERE $__timeFilter(At) and company_id = ${company_id}\ngroup by At\norder by At desc",
+          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) At,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) \"Попыток по источникам\",\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) \"Товаров по источникам\"\nfrom item_change_log_stat_all\nWHERE $__timeFilter(At) and company_id = ${company_id}\ngroup by At\norder by At desc",
           "refId": "A"
         }
       ],
@@ -2873,7 +2873,7 @@
           },
           "pluginVersion": "4.8.0",
           "queryType": "timeseries",
-          "rawSql": "SELECT\n    tm,\n    toString(company_id) || ' (' || country || ')' AS seller_info,\n    sum(originRow.2) items\nFROM (select\n          fromUnixTimestamp64Nano(ts) AS tm,\n          company_id,\n          country,\n          arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(tryOrigins))) originRow\n      from item_change_log_stat\n      where\n          $__timeFilter(tm) and (company_id = ${company_id} or ${company_id} = 0)\n      group by tm, company_id, country) t\nGROUP BY\n    tm,\n    country,\n    company_id\nHAVING\n    (items > 15000 and ${company_id} = 0) or company_id = ${company_id}     \nORDER BY\n    tm,\n    country,\n    company_id\nlimit 500",
+          "rawSql": "SELECT\n    tm,\n    toString(company_id) || ' (' || country || ')' AS seller_info,\n    sum(originRow.2) items\nFROM (select\n          fromUnixTimestamp64Nano(ts) AS tm,\n          company_id,\n          country,\n          arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(itemOrigins))) originRow\n      from item_change_log_stat_all\n      where\n          $__timeFilter(tm) and (company_id = ${company_id} or ${company_id} = 0)\n      group by tm, company_id, country) t\nGROUP BY\n    tm,\n    country,\n    company_id\nHAVING\n    (items > 15000 and ${company_id} = 0) or company_id = ${company_id}     \nORDER BY\n    tm,\n    country,\n    company_id\nlimit 500",
           "refId": "A"
         }
       ],
