@@ -106,21 +106,26 @@ services:
       - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
   
   grafana:
-    image: grafana/grafana:10.4.2
+    image: grafana/grafana:11.5.0
     container_name: grafana
     restart: unless-stopped
     networks:
       - monitoring
     depends_on:
-      - clickhouse-1            # первый узел вашего кластера
+      - clickhouse-1            # первый узел кластера
     ports:
-      - "3000:3000"             # <http://localhost:3000>
+      - "3000:3000"          
     environment:
       # логин/пароль по умолчанию
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
       # ставим плагин ClickHouse (ID тот же, что указан в JSON)admin
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+      - GF_SQL_DATASOURCES_MAX_OPEN_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_OPEN_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_IDLE_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_CONN_LIFETIME_DEFAULT=14400
+
     volumes:
       # данные Grafana
       - grafana_data:/var/lib/grafana
@@ -128,8 +133,9 @@ services:
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      # сами JSON-дашборды
+      # JSON-дашборды
       - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/custom.ini:/etc/grafana/grafana.ini:ro
 
   microservice:
     build: ./microservice

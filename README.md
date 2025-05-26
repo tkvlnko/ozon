@@ -1,11 +1,11 @@
 # ozon
 
- ЗАПУСКАЕТСЯ ВСЁ КОМАНДОЙ
-
+запуск
  ```bash 
 docker compose up -d --build
  ```
-ПЕРЕЗАГРУЖВЕМ ВСЁ КОМАНДОЙ
+
+перезагрузка
  ```bash 
 docker compose down -v      
 rm -rf ./clickhouse/data/clickhouse-*

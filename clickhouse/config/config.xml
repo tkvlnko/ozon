@@ -8,8 +8,6 @@
 </logger>
 <allow_experimental_map_type>1</allow_experimental_map_type>
     <allow_experimental_aggregate_functions_map>1</allow_experimental_aggregate_functions_map>
-   
-
 
     <http_port>8123</http_port>
     <tcp_port>9000</tcp_port>
@@ -21,6 +19,7 @@
     <tmp_path>/var/lib/clickhouse/tmp/</tmp_path>
     <user_files_path>/var/lib/clickhouse/user_files/</user_files_path>
     <format_schema_path>/var/lib/clickhouse/format_schemas/</format_schema_path>
+    <max_connections>1024</max_connections>
     <max_concurrent_queries>1000</max_concurrent_queries>
     <include_from>/etc/clickhouse-server/config.d/*.xml</include_from>
 

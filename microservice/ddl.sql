@@ -167,7 +167,7 @@ ON CLUSTER local_cluster
         origin String,
         is_created Bool,
         attempt Int64,
-        full_time Int64
+        full_time Float64
     ) 
 ENGINE = ReplicatedReplacingMergeTree(
     '/clickhouse/tables/{shard}/item_upload/attempt_create_time',
@@ -334,7 +334,8 @@ SELECT
       ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) ) / 1e9,
       0
     )                                           AS attempt,
-    (max(csd.ts) - min(csd.ts)) / 1e9           AS full_time
+    ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) )/1e9 AS full_time
+    
 FROM item_upload.company_statistic_daily        csd
 LEFT JOIN item_upload.company_statistic_status_daily cssd
   ON csd.item_id = cssd.item_id
