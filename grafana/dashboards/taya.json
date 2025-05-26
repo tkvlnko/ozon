@@ -1950,8 +1950,8 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(itemOrigins),uniqMapMerge(tryItemOrigins))) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
-          "refId": "A"
+          "rawSql": "SELECT\n    origin,\n    reinterpretAsInt64(sum(item_val)) - reinterpretAsInt64(sum(try_val)) AS diff\nFROM (\n    SELECT\n        originRow.1 AS origin,\n        originRow.2 AS item_val\n    FROM (\n        SELECT arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    )\n) AS i\nFULL OUTER JOIN (\n    SELECT\n        originRow.1 AS origin,\n        originRow.2 AS try_val\n    FROM (\n        SELECT arrayJoin(uniqMapMerge(tryItemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    )\n) AS t\nUSING (origin)\nGROUP BY origin\nORDER BY diff DESC\n",
+      "refId": "A"
         }
       ],
       "title": "Добавленных товаров обновлено",
@@ -2421,8 +2421,8 @@
           },
           "pluginVersion": "4.3.2",
           "queryType": "table",
-          "rawSql": "select\n newTS,\n uniqIf(company_id, frst = al) \"Продавцов с первого раза\",\n uniqIf(company_id, frst = 0 ) \"Продавцов более одного раза\"\nfrom \n(select\n    newTS,\n    company_id,\n    sum(c1) frst,\n    sum(arraySum(mapValues(c2))) al\nfrom (select\n        fromUnixTimestamp64Nano(ts) newTS,\n        company_id,\n        uniqMerge(first_time) c1,\n        mapFilter((k, v) -> (k not like '%update/%'), uniqMapMerge(origins)) c2\n      from company_statistic_daily_all\n      where\n        $__dateFilter(newTS)\n      group by newTS, company_id) t0\ngroup by newTS, company_id) t\ngroup by newTS",
-          "refId": "B"
+          "rawSql": "SELECT\n    newTS,\n    uniqIf(company_id, items = 1) AS \"Продавцов с первой попытки\",\n    uniqIf(company_id, items > 1) AS \"Продавцов с более одной попытки\"\nFROM (\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n        company_id,\n        countDistinctIf(item_id, origin NOT LIKE '%update/%') AS items\n    FROM item_upload.company_statistic_daily_all\n    WHERE $__timeFilter(ts)\n    GROUP BY newTS, company_id\n) AS t\nGROUP BY newTS\nORDER BY newTS\n",
+      "refId": "B"
         }
       ],
       "title": "Уникальных продавцов",
@@ -2759,8 +2759,8 @@
           },
           "pluginVersion": "4.8.0",
           "queryType": "table",
-          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) At,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) \"Попыток по источникам\",\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) \"Товаров по источникам\"\nfrom item_change_log_stat_all\nWHERE $__timeFilter(At) and company_id = ${company_id}\ngroup by At\norder by At desc",
-          "refId": "A"
+          "rawSql": "select\n    fromUnixTimestamp64Nano(ts) At,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) \"Попыток по источникам\",\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) \"Товаров по источникам\"\nfrom item_change_log_stat_all\nWHERE company_id = ${company_id}\ngroup by At\norder by At desc",
+      "refId": "A"
         }
       ],
       "title": "Загрузки по продавцу $company_id",
