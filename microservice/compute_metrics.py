@@ -3,41 +3,62 @@ import requests
 import time
 import random
 import json
+import os
 import threading
 from datetime import datetime
-from config import *
 from clickhouse_driver import Client
-
-
+from config import logger, GAUGES, SESSION_TTL, CONSUL, LEADER_KEY, BASE, JITTER_FACTOR
+from connect import get_client
 
 stop_metrics = threading.Event()
 metrics_thread = None
-# -----------------------------
-# Leader Election Helpers
-# -----------------------------
+
+
 def create_session():
     payload = {
         "Name": f"leader-election-{socket.gethostname()}",
         "TTL": SESSION_TTL,
         "Behavior": "delete",
     }
-    res = requests.put(f"{CONSUL}/v1/session/create", json=payload)
-    res.raise_for_status()
-    return res.json()["ID"]
+    try:
+        res = requests.put(f"{CONSUL}/v1/session/create", json=payload)
+        res.raise_for_status()
+        session_id = res.json()["ID"]
+        logger.info(f"🟢 Created session {session_id}")
+        return session_id
+    except Exception as e:
+        logger.exception("❌ Failed to create session")
+        raise
 
 
 def acquire_lock(session_id):
-    params = {"acquire": session_id}
-    res = requests.put(
-        f"{CONSUL}/v1/kv/{LEADER_KEY}", params=params, data=socket.gethostname()
-    )
-    res.raise_for_status()
-    return res.json()
+    try:
+        params = {"acquire": session_id}
+        res = requests.put(
+            f"{CONSUL}/v1/kv/{LEADER_KEY}", params=params, data=socket.gethostname()
+        )
+        res.raise_for_status()
+        got = res.json()
+        logger.debug(
+            f"🔐 Lock {'acquired' if got else 'not acquired'} for session {session_id}"
+        )
+        return got
+    except Exception as e:
+        logger.exception("❌ Failed to acquire lock")
+        raise
 
 
 def renew_session(session_id):
-    res = requests.put(f"{CONSUL}/v1/session/renew/{session_id}")
-    return res.status_code == 200
+    try:
+        res = requests.put(f"{CONSUL}/v1/session/renew/{session_id}")
+        success = res.status_code == 200
+        logger.debug(
+            f"🔄 Renew session {session_id} {'succeeded' if success else 'failed'}"
+        )
+        return success
+    except Exception as e:
+        logger.exception("❌ Error renewing session")
+        return False
 
 
 def on_become_leader():
@@ -47,14 +68,15 @@ def on_become_leader():
     stop_metrics.clear()
     metrics_thread = threading.Thread(target=compute_metrics, daemon=True)
     metrics_thread.start()
-    print(f"{socket.gethostname()} → started compute_metrics as LEADER", flush=True)
+    logger.info(
+        f"👑 {socket.gethostname()} → became LEADER and started compute_metrics"
+    )
 
 
 def on_lose_leadership():
     stop_metrics.set()
-    print(
-        f"{socket.gethostname()} → stopped compute_metrics, потерял лидерство",
-        flush=True,
+    logger.warning(
+        f"👋 {socket.gethostname()} → lost leadership and stopped compute_metrics"
     )
 
 
@@ -72,47 +94,85 @@ def leader_election_loop():
                 on_lose_leadership()
 
             if not renew_session(session_id):
-                print(
-                    f"{socket.gethostname()} session expired, renew", flush=True
-                )
+                logger.warning(f"⚠️ Session expired: {session_id}, creating new one")
                 session_id = create_session()
                 if is_leader:
                     is_leader = False
                     on_lose_leadership()
 
         except Exception as e:
-            print("Leader election error:", e, flush=True)
+            logger.exception("⚠️ Leader election loop error")
 
-        # использую jitter в 10%
         delta = BASE * JITTER_FACTOR
         sleep_time = BASE + random.uniform(-delta, delta)
         time.sleep(sleep_time)
 
-        # no jitter
-        # time.sleep(RENEW_INTERVAL)
-
-
 
 def compute_metrics():
-    client = Client(host="clickhouse", port=9000, user="default", password="default")
+    try:
+        client = get_client()
+    except Exception as e:
+        logger.exception("❌ Failed to connect to ClickHouse in compute_metrics")
+        return
+
     while not stop_metrics.is_set():
         try:
-            save_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='SAVE'"
+
+            # 1) Unique sellers
+            unique_sellers = client.execute(
+                """
+                SELECT uniq(company_id)
+                FROM company_statistic_daily_all
+                WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)
+                """
             )[0][0]
-            update_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='UPDATE'"
-            )[0][0]
-            error_count = client.execute(
-                "SELECT count() FROM product_load_events WHERE event='ERROR'"
-            )[0][0]
-            total_count = client.execute("SELECT count() FROM product_load_events")[0][
-                0
-            ]
-            SAVE_GAUGE.set(save_count)
-            UPDATE_GAUGE.set(update_count)
-            ERROR_GAUGE.set(error_count)
-            TOTAL_EVENTS_GAUGE.set(total_count)
+            GAUGES["unique_sellers"].set(unique_sellers)
+
+            # 2) Avg, Stddev и Upper Bound for attempt times
+            (
+                avg_,
+                stddev_,
+            ) = client.execute(
+                """
+                SELECT
+                    avg(attempt),
+                    stddevPop(attempt)
+                FROM attempt_create_time_all
+                """
+            )[0]
+            GAUGES["avg_attempt"].set(avg_)
+            GAUGES["stddev_attempt"].set(stddev_)
+            GAUGES["upper_bound_attempt"].set(avg_ + 3 * stddev_)
+
+            # 3) Считаем failure_rate за последнюю минуту
+            failure_rate = client.execute(
+                    """
+                    SELECT
+                    sum(if(is_created, 0, 1)) * 100.0 / count()
+                    FROM attempt_create_time_all
+                    WHERE date_create >= now() - INTERVAL 1 MINUTE
+                        """
+                    )[0][0]
+            GAUGES["failure_rate"].set(failure_rate)
+
+            rows = client.execute("""
+                SELECT
+                if(country != 'RU', 'Глобал', 'РФ') AS segment,
+                uniq(item_id) AS cnt
+                FROM attempt_create_time_all
+                WHERE is_created
+                AND date_create >= now() - INTERVAL 1 MINUTE
+                GROUP BY segment
+            """)
+
+            # Сброс прошлых значений, чтобы не держать старые лэйблы
+            GAUGES["created_items"].clear()
+
+            # Устанавливаем текущее значение по лэйблам
+            for segment, cnt in rows:
+                GAUGES["created_items"].labels(segment=segment).set(cnt)
+
         except Exception as e:
-            print("Error computing metrics:", e, flush=True)
+            logger.exception("❌ Error computing metrics")
+
         stop_metrics.wait(10)

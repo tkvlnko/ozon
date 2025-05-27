@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: preloaded
+    orgId: 1
+    type: file
+    folder: "" # корень «General»
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards

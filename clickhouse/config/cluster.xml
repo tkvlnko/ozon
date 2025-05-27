@@ -1,0 +1,36 @@
+<yandex>
+  <remote_servers>
+    <local_cluster>
+      <shard>
+        <internal_replication>true</internal_replication>
+        <replica>
+          <host>clickhouse-1</host>
+          <port>9000</port>
+          <user>default</user>
+          <password>default</password>
+        </replica>
+        <replica>
+          <host>clickhouse-2</host>
+          <port>9000</port>
+          <user>default</user>
+          <password>default</password>
+        </replica>
+      </shard>
+      <shard>
+        <internal_replication>true</internal_replication>
+        <replica>
+          <host>clickhouse-3</host>
+          <port>9000</port>
+          <user>default</user>
+          <password>default</password>
+        </replica>
+        <replica>
+          <host>clickhouse-4</host>
+          <port>9000</port>
+          <user>default</user>
+          <password>default</password>
+        </replica>
+      </shard>
+    </local_cluster>
+  </remote_servers>
+</yandex>

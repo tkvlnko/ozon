@@ -1,11 +1,8 @@
-version: '3.8'
-
 networks:
   monitoring:
     driver: bridge
 
 services:
-  # Consul - Service Discovery
   consul:
     image: consul:1.15.4
     container_name: consul
@@ -19,7 +16,14 @@ services:
     command: agent -data-dir=/consul/data -config-dir=/consul/config -dev -client=0.0.0.0 -bind=0.0.0.0
     restart: unless-stopped
 
-  # Prometheus - Metrics Collection
+  zookeeper:
+    image: zookeeper:3.8   
+    container_name: zookeeper
+    ports: 
+      - "2181:2181"
+    networks: 
+      - monitoring 
+
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: prometheus
@@ -37,52 +41,145 @@ services:
     depends_on:
       - consul
 
-  # ClickHouse - Database
-  clickhouse:
-    image: clickhouse/clickhouse-server:latest
-    container_name: clickhouse
-    ports:
-      - "8123:8123"  # HTTP Interface
-      - "9000:9000"  # Native Interface
+  clickhouse-base: &clickhouse
+    image: clickhouse/clickhouse-server:24.4-alpine
+    depends_on: [ zookeeper ]
+    restart: unless-stopped
+    networks:
+      monitoring:
+        aliases:
+          - clickhouse 
+    ports: []
     volumes:
-      - ./clickhouse/data:/var/lib/clickhouse
-      - ./clickhouse/config/config.xml:/etc/clickhouse-server/config.d/custom-config.xml:ro
-      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/custom-user.xml:ro
-    environment:
-      CLICKHOUSE_USER: default
-      CLICKHOUSE_PASSWORD: default
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+
+  # -------- SHARD 1 ----------
+  clickhouse-1:
+    <<: *clickhouse
+    container_name: clickhouse-1
+    hostname: clickhouse-1
+    ports: [ "9001:9000", "8124:8123" ]
+    volumes:
+      - ./clickhouse/node01/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-1:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  clickhouse-2:
+    <<: *clickhouse
+    container_name: clickhouse-2
+    hostname: clickhouse-2
+    ports: [ "9002:9000", "8125:8123" ]
+    volumes:
+      - ./clickhouse/node02/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-2:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  # -------- SHARD 2 ----------
+  clickhouse-3:
+    <<: *clickhouse
+    container_name: clickhouse-3
+    hostname: clickhouse-3
+    ports: [ "9003:9000", "8126:8123" ]
+    volumes:
+      - ./clickhouse/node03/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-3:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+
+  clickhouse-4:
+    <<: *clickhouse
+    container_name: clickhouse-4
+    hostname: clickhouse-4
+    ports: [ "9004:9000", "8127:8123" ]
+    volumes:
+      - ./clickhouse/node04/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
+      - ./clickhouse/data/clickhouse-4:/var/lib/clickhouse
+      - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
+      - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
+  
+  grafana:
+    image: grafana/grafana:11.5.0
+    container_name: grafana
+    restart: unless-stopped
     networks:
       - monitoring
-    restart: unless-stopped
-
-  # Grafana - Data Visualization
-  grafana:
-    image: grafana/grafana-oss:9.5.6
-    container_name: grafana
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning
-      - ./grafana/data:/var/lib/grafana
-      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - clickhouse-1            # первый узел кластера
     ports:
-      - "3000:3000"
+      - "3000:3000"          
     environment:
+      # логин/пароль по умолчанию
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
-    networks:
-      - monitoring
-    restart: unless-stopped
-    depends_on:
-      - prometheus
-      - clickhouse
+      # ставим плагин ClickHouse (ID тот же, что указан в JSON)admin
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+      - GF_SQL_DATASOURCES_MAX_OPEN_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_OPEN_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_IDLE_CONNS_DEFAULT=150
+      - GF_SQLDATASOURCE_MAX_CONN_LIFETIME_DEFAULT=14400
+
+    volumes:
+      # данные Grafana
+      - grafana_data:/var/lib/grafana
+      # авто-провиженинг
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      # JSON-дашборды
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/custom.ini:/etc/grafana/grafana.ini:ro
 
   microservice:
     build: ./microservice
+    environment:
+      CLICKHOUSE_HOST: clickhouse-1
+      CLICKHOUSE_PORT: "9000"
     expose:
-      - "84"            # только внутри monitoring-сети
+      - "84"          
     networks:
       - monitoring
+    depends_on:
+      - clickhouse-1
+      - consul
     deploy:
       replicas: 3
+  
+  ch-init:
+    image: clickhouse/clickhouse-server:24.4-alpine
+    networks:
+      - monitoring
+    depends_on:
+      - clickhouse-1
+    volumes:
+      - ./microservice/ddl.sql:/ddl/ddl.sql:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # ждём открытия порта 9000
+        until clickhouse-client \
+          --host clickhouse-1 \
+          --user default \
+          --password default \
+          --query "SELECT 1"; do
+          sleep 1
+        done
+
+        # применяем DDL
+        clickhouse-client \
+          --host clickhouse-1 \
+          --user default \
+          --password default \
+          --multiquery < /ddl/ddl.sql
+    restart: "no"
 
 volumes:
   prometheus_data:

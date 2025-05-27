@@ -1,0 +1,3517 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 1,
+    "id": 1,
+    "links": [],
+    "panels": [
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 26,
+        "panels": [],
+        "title": "Time for items uploaded",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "For each 30-minute interval shows the average number of creation attempts alongside its upper control limit (mean + 3 × std dev). Any point where the average approaches or exceeds the upper bound flags an anomalous spike in attempts.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 7,
+              "gradientMode": "hue",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "log": 2,
+                "type": "log"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "area"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "#EAB839",
+                  "value": 60
+                },
+                {
+                  "color": "semi-dark-orange",
+                  "value": 120
+                },
+                {
+                  "color": "dark-red",
+                  "value": 360
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 18,
+          "x": 0,
+          "y": 1
+        },
+        "id": 21,
+        "maxDataPoints": 100,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"среднее время\",\n    stddevPop(attempt) AS \"стандартное отклонение\",\n    \"среднее время\" + 3 * \"стандартное отклонение\" AS \"верхняя граница\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": " 30-Minute attempts control chart",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "B Товаров больше одной попытки"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "percentunit"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 1
+        },
+        "id": 24,
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": true,
+          "text": {
+            "titleSize": 16
+          },
+          "textMode": "value_and_name",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"average time\",\n    stddevPop(full_time) AS \"standard dev\",\n    \"average time\" + 3 * \"standard dev\" AS \"upper bound\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "hide": false,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n    t0.newTS,\n    (t0.allItems - t0.tryFirst) / t2.items AS \"Items with more that 1 attempts\"\nFROM\n(\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 day) AS newTS,\n        countDistinctIf(csd.item_id, cssd.is_created) AS tryFirst,\n        countDistinct(csd.item_id) AS allItems\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL INNER JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE fromUnixTimestamp64Nano(csd.ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY newTS\n) AS t0\nLEFT JOIN\n(\n    SELECT\n        newTS,\n        sum(originRow.2) AS items\n    FROM (\n        SELECT\n            toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n            arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n        GROUP BY newTS\n    ) AS t\n    WHERE t.originRow.1 NOT LIKE '%update/%'\n    GROUP BY newTS\n) AS t2\nON t0.newTS = t2.newTS\n",
+            "refId": "B"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "Full time of item creation",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Any time the average creation latency approaches or exceeds the upper boundary indicates an unusual slowdown in the process",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 5,
+              "gradientMode": "hue",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "log": 2,
+                "type": "log"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 18,
+          "x": 0,
+          "y": 9
+        },
+        "id": 22,
+        "maxDataPoints": 100,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(full_time) AS \"avg time\",\n    stddevPop(full_time) AS \"stdev\",\n    \"avg time\" + 3 * \"stdev\" AS \"upper bound\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create) \ngroup by at",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "30-Minute creation latency control chart",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "s"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "avg time"
+              },
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "dark-orange",
+                        "value": 60
+                      },
+                      {
+                        "color": "dark-red",
+                        "value": 120
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "stdev"
+              },
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "dark-orange",
+                        "value": 120
+                      },
+                      {
+                        "color": "dark-red",
+                        "value": 360
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "upper bound"
+              },
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "green",
+                        "value": null
+                      },
+                      {
+                        "color": "dark-orange",
+                        "value": 360
+                      },
+                      {
+                        "color": "dark-red",
+                        "value": 720
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 9
+        },
+        "id": 23,
+        "maxDataPoints": 100,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "horizontal",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": true,
+          "text": {
+            "titleSize": 16
+          },
+          "textMode": "value_and_name",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) at,\n    avg(attempt) AS \"avg time\",\n    stddevPop(attempt) AS \"stdev\",\n    \"avg time\" + 3 * \"stdev\" AS \"upper bound\"\nFROM\n    attempt_create_time_all\nWHERE\n    $__timeFilter(date_create)\ngroup by at",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "Time: attempt of item creation",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Percentage of items greater than three standard deviations in attempt time",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "axisSoftMax": 20,
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "hue",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "area"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "super-light-yellow",
+                  "value": 2
+                },
+                {
+                  "color": "semi-dark-orange",
+                  "value": 5
+                },
+                {
+                  "color": "red",
+                  "value": 10
+                }
+              ]
+            },
+            "unit": "percent"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 18,
+          "x": 0,
+          "y": 17
+        },
+        "id": 20,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "WITH\n    (\n        SELECT\n            avg(attempt) AS mean_time,\n            stddevPop(attempt) AS stddev_time\n        FROM attempt_create_time\n        WHERE $__timeFilter(date_create)\n    ) AS stats\n\nSELECT\n    toStartOfInterval(date_create, INTERVAL 30 minute) AS at,\n    countIf(attempt > (stats.mean_time + 3 * stats.stddev_time)) * 100.0 / count() AS \"items beyond bound\"\nFROM attempt_create_time\nWHERE $__timeFilter(date_create)\nGROUP BY at\n",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "Percentage of items greater than 3 standard deviations in 30 minutes",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "fillOpacity": 70,
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 17
+        },
+        "id": 29,
+        "options": {
+          "colWidth": 0.9,
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": false
+          },
+          "rowHeight": 0.9,
+          "showValue": "never",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "WITH\n    quantileTiming(0.90)(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * -100 AS \"By amount\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time_all\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "hide": false,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "WITH\n    avg(cnt) AS avg_load_time\nSELECT\n    toStartOfInterval(hour, INTERVAL 30 minute ) at,\n    (avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * 100 AS \"By time\"\nFROM (SELECT\n          toStartOfMinute(date_create) AS hour,\n          uniq(item_id) cnt\n      FROM\n          attempt_create_time_all\n      WHERE\n          $__timeFilter(date_create)\n        and is_created\n      Group by hour\n      ORDER BY\n          hour) t0\nGROUP BY at\nORDER BY at;",
+            "refId": "B"
+          }
+        ],
+        "timeFrom": "2d",
+        "title": "Stability",
+        "type": "status-history"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Shows the percentage of item‐creation attempts that did not result in a successful save.",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "fixed"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "area"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "semi-dark-yellow",
+                  "value": 20
+                },
+                {
+                  "color": "semi-dark-orange",
+                  "value": 50
+                },
+                {
+                  "color": "semi-dark-red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 25
+        },
+        "id": 32,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n  toStartOfInterval(date_create, INTERVAL 1 minute) AS day,\n  sum(if(is_created, 0, 1)) / count() * 100 AS \"failure_rate\"\nFROM attempt_create_time_all\nWHERE $__timeFilter(date_create)\nGROUP BY day\nORDER BY day",
+            "refId": "A"
+          }
+        ],
+        "title": "Daily failure rate",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 33
+        },
+        "id": 25,
+        "panels": [],
+        "title": "Items",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "log": 2,
+                "type": "log"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 34
+        },
+        "id": 27,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.5.0",
+            "queryType": "table",
+            "rawSql": "with\n  avg(cnt) as average_products,\n  stddevPop(cnt) AS standard_deviation,\n  average_products + 1 * standard_deviation AS upper_bound,\n  average_products - 1 * standard_deviation AS lower_bound_orig\nselect\n    toStartOfHour(hour) AS hour,\n    upper_bound \"верхняя граница\",\n    if(lower_bound_orig >= 0,  lower_bound_orig, 0) \"нижняя граница\"\nfrom\n    (SELECT\n        toStartOfMinute(date_create) AS hour,\n        uniq(item_id) cnt\n    FROM\n        attempt_create_time_all\n    WHERE\n        $__timeFilter(date_create)\n        and is_created\n    Group by hour\n    ORDER BY\n        hour) t0\nGroup by hour\nORDER BY\n    hour;",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "hide": false,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.5.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time_all\n    WHERE\n        is_created\n    Group by at\n    ORDER BY\n        at",
+            "refId": "B"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "Создание товаров в минуту со стандартным отклонением за 30 мин",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "smooth",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 34
+        },
+        "id": 30,
+        "options": {
+          "legend": {
+            "calcs": [
+              "mean",
+              "max",
+              "stdDev"
+            ],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "hide": false,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.5.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n        toStartOfMinute(date_create) AS at,\n        if(country != 'RU', 'Глобал', 'РФ') as \"Сегмент\",\n        uniq(item_id) \"Товаров\"\n    FROM\n        attempt_create_time_all\n    WHERE\n        is_created\n    Group by at, \"Сегмент\"\n    ORDER BY\n        at, \"Сегмент\"",
+            "refId": "B"
+          }
+        ],
+        "timeFrom": "1d",
+        "title": "Создание товаров в минуту по сегментам",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "companies that upload more than 4 mediafiles",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 42
+        },
+        "id": 36,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n  toDate(fromUnixTimestamp64Nano(ts)) AS day,\n  -- доля компаний, у которых count(media) > 5\n  round(\n    countIf(arraySum(mapValues(media)) > 5) * 100.0\n    / count(),\n    2\n  ) AS heavy_pct\nFROM company_statistic_daily_all\nWHERE $__timeFilter(fromUnixTimestamp64Nano(ts))\nGROUP BY day\nORDER BY day\n",
+            "refId": "A"
+          }
+        ],
+        "title": "% of all companies with heavy media",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Учитываются только товары которые дошли до полки, упавшие товары не учитываются, см. график ниже по всем добавленным item   ",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "bars",
+              "fillOpacity": 25,
+              "gradientMode": "opacity",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "С первой попытки"
+              },
+              "properties": [
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                },
+                {
+                  "id": "unit",
+                  "value": "percentunit"
+                },
+                {
+                  "id": "custom.drawStyle",
+                  "value": "line"
+                },
+                {
+                  "id": "custom.lineInterpolation",
+                  "value": "smooth"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Добавлено на полку"
+              },
+              "properties": [
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                },
+                {
+                  "id": "unit",
+                  "value": "percentunit"
+                },
+                {
+                  "id": "custom.drawStyle",
+                  "value": "line"
+                },
+                {
+                  "id": "custom.lineInterpolation",
+                  "value": "smooth"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 42
+        },
+        "id": 10,
+        "maxDataPoints": 100,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "hidden",
+            "placement": "right",
+            "showLegend": false
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n    t0.newTS,\n    t0.tryFirst / t2.items AS \"С первой попытки\",\n    t0.allItems / t2.items AS \"Добавлено на полку\",\n    t0.tryFirst AS \"Количество с первой попытки\",\n    t0.allItems AS \"Количество добавленных на полку\"\nFROM\n(\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(csd.ts), INTERVAL 1 day) AS newTS,\n        uniqIf(csd.item_id, cssd.is_created) AS tryFirst,\n        countDistinct(csd.item_id) AS allItems\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL INNER JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE $__timeFilter(csd.ts)\n    GROUP BY newTS\n) AS t0\nLEFT JOIN\n(\n    SELECT\n        newTS,\n        sum(originRow.2) AS items\n    FROM\n    (\n        SELECT\n            toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n            arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE $__timeFilter(ts)\n        GROUP BY newTS\n    ) AS t\n    WHERE t.originRow.1 NOT LIKE '%update/%'\n    GROUP BY newTS\n) AS t2\nON t0.newTS = t2.newTS\nWHERE t0.newTS >= toDateTime('2024-10-04')\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Процент созданных товаров с первой и более попыток ",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Highlights regions with longest item creation",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "p95_ms"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "#42619e",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "p50_ms"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "#449439",
+                    "mode": "fixed"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 50
+        },
+        "id": 34,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "auto",
+          "stacking": "none",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 0
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n  country,\n  quantile(0.5)(full_time)  AS p50_ms,\n  quantile(0.95)(full_time) AS p95_ms\nFROM attempt_create_time_all\nWHERE is_created\n  AND $__timeFilter(date_create)\nGROUP BY country\nORDER BY p95_ms DESC\n",
+            "refId": "A"
+          }
+        ],
+        "title": "P95 and median of full delay by country",
+        "type": "barchart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Количество добавленных новых item в разрезе дня",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "series",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "fillOpacity": 80,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "lineWidth": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "newTS"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsLocalNoDateIfToday"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 12,
+          "y": 50
+        },
+        "id": 9,
+        "options": {
+          "barRadius": 0,
+          "barWidth": 0.97,
+          "fullHighlight": false,
+          "groupWidth": 0.7,
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "orientation": "auto",
+          "showValue": "auto",
+          "stacking": "normal",
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          },
+          "xTickLabelRotation": 0,
+          "xTickLabelSpacing": 100
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "timeseries",
+            "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
+            "refId": "A"
+          }
+        ],
+        "title": "Добавлено item за период",
+        "type": "barchart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Количество добавленных новых item в разрезе дня",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": [],
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "newTS"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsLocalNoDateIfToday"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 50
+        },
+        "id": 28,
+        "options": {
+          "displayLabels": [
+            "name",
+            "percent"
+          ],
+          "legend": {
+            "calcs": [],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true,
+            "values": [
+              "percent"
+            ]
+          },
+          "pieType": "pie",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "timeseries",
+            "rawSql": "select\n newTS,\n country \"Страна\", \n sum(originRow.2) \"Товаров\"\nfrom\n(select\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    country,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    $__dateFilter(newTS)\ngroup by newTS, company_id, country) t\nwhere\n t.originRow.1 not like '%update/%'\ngroup by newTS, country\norder by newTS, country",
+            "refId": "A"
+          }
+        ],
+        "title": "Процент по странам item",
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Table of origin channels ranked by their average number of attempts before creation",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 12,
+          "x": 0,
+          "y": 58
+        },
+        "id": 33,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "table",
+            "rawSql": "SELECT\n  origin,\n  round(avg(attempt), 2)          AS avg_attempts,\n  round(stddevPop(attempt), 2)    AS stddev_attempts\nFROM attempt_create_time\nWHERE is_created\n  AND attempt >= 0                \n  AND $__timeFilter(date_create)\nGROUP BY origin\nORDER BY avg_attempts DESC\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Origin performance",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "bars",
+              "fillOpacity": 100,
+              "gradientMode": "opacity",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": [
+            {
+              "__systemRef": "hideSeriesFrom",
+              "matcher": {
+                "id": "byNames",
+                "options": {
+                  "mode": "exclude",
+                  "names": [
+                    "Количество наших image"
+                  ],
+                  "prefix": "All except:",
+                  "readOnly": true
+                }
+              },
+              "properties": [
+                {
+                  "id": "custom.hideFrom",
+                  "value": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 9,
+          "w": 24,
+          "x": 0,
+          "y": 68
+        },
+        "id": 12,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "builderOptions": "The query is not a select statement.",
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": "The query is not a select statement."
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    newTS,\n    media_type AS \"Тип медиа\",\n    sum(if(match(media_url, '.*?(ozone\\\\.ru|ozonusercontent\\\\.com)$'), cnt_media, 0)) AS \"Количество наших\",\n    sum(if(match(media_url, '.*?(ozone\\\\.ru|ozonusercontent\\\\.com|bad_hostname)$'), 0, cnt_media)) AS \"Количество внешних\",\n    sum(if(match(media_url, '.*?(bad_hostname)$'), cnt_media, 0)) AS \"Количество плохих ссылок\"\nFROM (\n    SELECT\n        fromUnixTimestamp64Nano(csm.ts) AS newTS,\n        splitByString(':', media_entry.1) AS media_array,\n        media_array[1] AS media_type,\n        media_entry.1 AS media_key,\n        media_entry.2 AS cnt_media,\n        replaceOne(media_entry.1, concat(media_array[1], ':'), '') AS media_url\n    FROM item_upload.company_statistic_daily_all AS csm\n    ARRAY JOIN url_by_media AS media_entry\n) t\nGROUP BY newTS, media_type\nORDER BY newTS, media_type\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Загружено медиа файлов",
+        "type": "timeseries"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 77
+        },
+        "id": 14,
+        "panels": [],
+        "title": "Статистика за сегодня с 00:00 UTC",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Уникальное количество продавцов загрузивших товаров, как обновление так и добавление",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 78
+        },
+        "id": 19,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n    uniq(company_id)\n          from company_statistic_daily_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)",
+            "refId": "A"
+          }
+        ],
+        "title": "Уникальных продавцов",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Сколько всего обновили товаров дошедших до полки за сегодня",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 78
+        },
+        "id": 5,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "SELECT\n    origin,\n    reinterpretAsInt64(sum(item_val)) - reinterpretAsInt64(sum(try_val)) AS diff\nFROM (\n    SELECT\n        originRow.1 AS origin,\n        originRow.2 AS item_val\n    FROM (\n        SELECT arrayJoin(uniqMapMerge(itemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    )\n) AS i\nFULL OUTER JOIN (\n    SELECT\n        originRow.1 AS origin,\n        originRow.2 AS try_val\n    FROM (\n        SELECT arrayJoin(uniqMapMerge(tryItemOrigins)) AS originRow\n        FROM item_upload.item_change_log_stat_all\n        WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    )\n) AS t\nUSING (origin)\nGROUP BY origin\nORDER BY diff DESC\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Добавленных товаров обновлено",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Сколько всего попыток добавить товары за день",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 78
+        },
+        "id": 15,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "table",
+            "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t",
+            "refId": "A"
+          }
+        ],
+        "title": "Попыток  добавления товаров",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Количество товаров которые пытаются добавить на полку, учитываются не только за текущий день, но и за предыдущие дни",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 78
+        },
+        "id": 6,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(tryItemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t",
+            "refId": "A"
+          }
+        ],
+        "title": "Товаров добавляемых до полки",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Сколько всего попыток обновить добавленные товары за день",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 0,
+          "y": 82
+        },
+        "id": 3,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n sum(originRow.2)\nfrom\n(select\n    arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(itemOrigins))) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)) t\nwhere\n t.originRow.1 like '%update/%'",
+            "refId": "A"
+          }
+        ],
+        "title": "Попыток обновления добавленных товаров",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Новые продавцы",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 6,
+          "y": 82
+        },
+        "id": 4,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n    fromUnixTimestamp64Nano(ts) newTS,\n    uniq(company_id) \"Новых продавцов\"\nfrom\n    company_statistic_daily_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)\n    and company_id > (select max(company_id) from company_statistic_daily_all where fromUnixTimestamp64Nano(ts) < toStartOfInterval(now(), interval 1 day))\ngroup by\n    newTS\norder by newTS",
+            "refId": "A"
+          }
+        ],
+        "title": "Уникальных новых продавцов",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Уникальных продавцов загрузивших товары с первого раза",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 82
+        },
+        "id": 16,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "SELECT uniq(company_id)\nFROM (\n    SELECT\n        csd.company_id,\n        uniqIf(csd.item_id, cssd.is_created) AS frst,\n        countIf(origin NOT LIKE '%update/%') AS al\n    FROM item_upload.company_statistic_daily_all AS csd\n    GLOBAL JOIN item_upload.company_statistic_status_daily_all AS cssd\n        ON csd.item_id = cssd.item_id AND csd.ts = cssd.ts\n    WHERE fromUnixTimestamp64Nano(csd.ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY csd.company_id\n    HAVING frst = al\n) t\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Уникальных продавцов с первого раза",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Уникальных продавцов не сумевших загрузить товары",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 82
+        },
+        "id": 17,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "percentChangeColorMode": "standard",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "values": false
+          },
+          "showPercentChange": false,
+          "textMode": "auto",
+          "wideLayout": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "SELECT uniq(company_id)\nFROM (\n    SELECT\n        company_id,\n        arraySum(mapValues(uniqMapMerge(tryItemOrigins))) AS c1,\n        arraySum(mapValues(uniqMapMerge(itemOrigins))) AS c2\n    FROM item_change_log_stat_all\n    WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)\n    GROUP BY company_id\n    HAVING c1 = c2\n) t\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Уникальных продавцов \"потрачено\" ",
+        "type": "stat"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": []
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 6,
+          "x": 0,
+          "y": 86
+        },
+        "id": 7,
+        "options": {
+          "displayLabels": [],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true,
+            "values": [
+              "value"
+            ]
+          },
+          "pieType": "pie",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "limit": 100,
+            "values": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "table",
+            "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(origins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
+            "refId": "A"
+          }
+        ],
+        "title": "Попытки по источнику",
+        "type": "piechart"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              }
+            },
+            "mappings": []
+          },
+          "overrides": [
+            {
+              "__systemRef": "hideSeriesFrom",
+              "matcher": {
+                "id": "byNames",
+                "options": {
+                  "mode": "exclude",
+                  "names": [
+                    "sum(tupleElement(originRow, 2))"
+                  ],
+                  "prefix": "All except:",
+                  "readOnly": true
+                }
+              },
+              "properties": [
+                {
+                  "id": "custom.hideFrom",
+                  "value": {
+                    "legend": false,
+                    "tooltip": false,
+                    "viz": true
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 7,
+          "x": 6,
+          "y": 86
+        },
+        "id": 8,
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true,
+            "values": [
+              "value"
+            ]
+          },
+          "pieType": "pie",
+          "reduceOptions": {
+            "calcs": [
+              "lastNotNull"
+            ],
+            "fields": "",
+            "limit": 200,
+            "values": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n originRow.1 origin,\n sum(originRow.2)\nfrom\n(select\n    company_id,\n    arrayJoin(uniqMapMerge(itemOrigins)) originRow\nfrom item_change_log_stat_all\nwhere\n    fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day) group by company_id) t\n    group by origin",
+            "refId": "A"
+          }
+        ],
+        "title": "Товаров по источнику",
+        "type": "piechart"
+      },
+      {
+        "collapsed": false,
+        "gridPos": {
+          "h": 1,
+          "w": 24,
+          "x": 0,
+          "y": 96
+        },
+        "id": 11,
+        "panels": [],
+        "title": "Статистика по продовцам",
+        "type": "row"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "bars",
+              "fillOpacity": 0,
+              "gradientMode": "hue",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "always",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 11,
+          "w": 24,
+          "x": 0,
+          "y": 97
+        },
+        "id": 18,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "select\n  fromUnixTimestamp64Nano(ts) newTS,\n  uniq(company_id) \"Уникальных продавцов\"\nfrom \n  company_statistic_daily_all\nwhere\n    $__dateFilter(newTS)\ngroup by\n  newTS\norder by newTS  ",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "hide": false,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.3.2",
+            "queryType": "table",
+            "rawSql": "SELECT\n    newTS,\n    uniqIf(company_id, items = 1) AS \"Продавцов с первой попытки\",\n    uniqIf(company_id, items > 1) AS \"Продавцов с более одной попытки\"\nFROM (\n    SELECT\n        toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) AS newTS,\n        company_id,\n        countDistinctIf(item_id, origin NOT LIKE '%update/%') AS items\n    FROM item_upload.company_statistic_daily_all\n    WHERE $__timeFilter(ts)\n    GROUP BY newTS, company_id\n) AS t\nGROUP BY newTS\nORDER BY newTS\n",
+            "refId": "B"
+          }
+        ],
+        "title": "Уникальных продавцов",
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Показывает 10 самых загружаемых продавцов по попыткам (attempts)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Попыток по источнику"
+              },
+              "properties": [
+                {
+                  "id": "custom.inspect",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "День"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsLocalNoDateIfToday"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 108
+        },
+        "id": 1,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "table",
+            "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    attempts \"Попыток\",\n    originAttempts \"Попыток по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(origins))) attempts,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) originAttempts,\n    row_number() OVER (PARTITION BY newTS ORDER BY attempts DESC) AS rankAttempts\nfrom item_change_log_stat_all\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankAttempts <= 10\norder by  t.newTS DESC, rankAttempts\nlimit 100",
+            "refId": "A"
+          }
+        ],
+        "title": "Топ попыток продавцов",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Показывает 10 самых загружаемых продавцов по товарам (items)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Товаров по источнику"
+              },
+              "properties": [
+                {
+                  "id": "custom.inspect",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "День"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsLocalNoDateIfToday"
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 108
+        },
+        "id": 2,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": []
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.4.0",
+            "queryType": "table",
+            "rawSql": "select\n    toDate(newTS) \"День\",\n    company_id \"Компания\",\n    items \"Товаров\",\n    originItems \"Товаров по источнику\"\n    from (\nselect\n    toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 day) newTS,\n    company_id,\n    arraySum(mapValues(uniqMapMerge(itemOrigins))) items,\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) originItems,\n    row_number() OVER (PARTITION BY newTS ORDER BY items DESC) AS rankItems\nfrom item_change_log_stat_all\ngroup by newTS, company_id) t\nWHERE $__dateFilter(t.newTS) and rankItems <= 10\norder by  t.newTS DESC, rankItems\nlimit 100",
+            "refId": "A"
+          }
+        ],
+        "title": "Топ товаров продавцов",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Which sellers for the last 7 days have the amount of loads per last day higher than the bount mu+2sigma  (30-days history)",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 116
+        },
+        "id": 35,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "editorType": "sql",
+            "format": 2,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "logs",
+            "rawSql": "SELECT\n  d.day,\n  d.company_id,\n  d.cnt,\n  s.mu,\n  s.sigma,\n  -- флаг «спайка», =1 если дневной объём > μ + 2·σ\n  d.cnt > s.mu + 2 * s.sigma AS is_spike\nFROM\n(\n  -- 1) дневные объёмы за текущее время панели\n  SELECT\n    toDate(date_create) AS day,\n    company_id,\n    count()             AS cnt\n  FROM attempt_create_time_all\n  WHERE $__timeFilter(date_create)\n  GROUP BY day, company_id\n) AS d\nANY LEFT JOIN\n(\n  -- 2) статистика по всем дням за последний месяц\n  SELECT\n    company_id,\n    avg(cnt)          AS mu,\n    stddevPop(cnt)    AS sigma\n  FROM\n  (\n    SELECT\n      toDate(date_create) AS day,\n      company_id,\n      count()             AS cnt\n    FROM attempt_create_time_all\n    WHERE date_create BETWEEN subtractDays(today(), 30) AND today()\n    GROUP BY day, company_id\n  )\n  GROUP BY company_id\n) AS s\nUSING company_id\n-- показываем только последние 7 дней\nWHERE d.day >= subtractDays(today(), 7)\nORDER BY d.cnt DESC\n",
+            "refId": "A"
+          }
+        ],
+        "title": "Anomalies among sellers",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Показывает количество попыток и товаров по источнику",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "custom": {
+              "align": "auto",
+              "cellOptions": {
+                "type": "auto"
+              },
+              "inspect": false
+            },
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Попыток по источникам"
+              },
+              "properties": [
+                {
+                  "id": "custom.inspect",
+                  "value": true
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "At"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "dateTimeAsLocalNoDateIfToday"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "Товаров по источникам"
+              },
+              "properties": [
+                {
+                  "id": "custom.inspect",
+                  "value": true
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 17,
+          "w": 24,
+          "x": 0,
+          "y": 124
+        },
+        "id": 13,
+        "options": {
+          "cellHeight": "sm",
+          "footer": {
+            "countRows": false,
+            "fields": "",
+            "reducer": [
+              "sum"
+            ],
+            "show": false
+          },
+          "showHeader": true,
+          "sortBy": [
+            {
+              "desc": true,
+              "displayName": "At"
+            }
+          ]
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 1,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.8.0",
+            "queryType": "table",
+            "rawSql": "select\n    fromUnixTimestamp64Nano(ts) At,\n    mapSort((k,v) -> -v,uniqMapMerge(origins)) \"Попыток по источникам\",\n    mapSort((k,v) -> -v,uniqMapMerge(itemOrigins)) \"Товаров по источникам\"\nfrom item_change_log_stat_all\nWHERE company_id = ${company_id}\ngroup by At\norder by At desc",
+            "refId": "A"
+          }
+        ],
+        "title": "Загрузки по продавцу $company_id",
+        "type": "table"
+      },
+      {
+        "datasource": {
+          "type": "grafana-clickhouse-datasource",
+          "uid": "P2C33A3262F9B7B46"
+        },
+        "description": "Где загрузок больше 15К или по компании",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisBorderShow": false,
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "barWidthFactor": 0.6,
+              "drawStyle": "bars",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": false,
+              "stacking": {
+                "group": "A",
+                "mode": "normal"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "fieldMinMax": false,
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green"
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "short"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 33,
+          "w": 24,
+          "x": 0,
+          "y": 141
+        },
+        "id": 31,
+        "options": {
+          "legend": {
+            "calcs": [
+              "max",
+              "mean",
+              "count"
+            ],
+            "displayMode": "table",
+            "placement": "right",
+            "showLegend": true,
+            "sortBy": "Count",
+            "sortDesc": true
+          },
+          "tooltip": {
+            "hideZeros": false,
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "11.5.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "grafana-clickhouse-datasource",
+              "uid": "adzva9wij30g0e"
+            },
+            "editorType": "sql",
+            "format": 0,
+            "meta": {
+              "builderOptions": {
+                "columns": [],
+                "database": "",
+                "limit": 1000,
+                "mode": "list",
+                "queryType": "table",
+                "table": ""
+              }
+            },
+            "pluginVersion": "4.9.0",
+            "queryType": "timeseries",
+            "rawSql": "SELECT\n    tm,\n    toString(company_id) || ' (' || country || ')' AS seller_info,\n    sum(originRow.2) items\n    \nFROM (select\n          fromUnixTimestamp64Nano(ts) AS tm,\n          company_id,\n          country,\n          arrayJoin(mapSubtract(uniqMapMerge(origins),uniqMapMerge(itemOrigins))) originRow\n      from item_change_log_stat_all\n      where\n          $__timeFilter(tm) and (company_id = ${company_id} or ${company_id} = 0)\n      group by tm, company_id, country) t\nGROUP BY\n    tm,\n    country,\n    company_id\nHAVING\n    (items > 15000 and ${company_id} = 0) or company_id = ${company_id}     \nORDER BY\n    tm,\n    country,\n    company_id\nlimit 500",
+            "refId": "A"
+          }
+        ],
+        "timeFrom": "7d",
+        "title": "Статистика загрузки по продавцам",
+        "type": "timeseries"
+      }
+    ],
+    "preload": false,
+    "refresh": "5m",
+    "schemaVersion": 40,
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "text": "",
+            "value": ""
+          },
+          "hide": 2,
+          "includeAll": false,
+          "label": "Data source",
+          "name": "datasource",
+          "options": [],
+          "query": "grafana-clickhouse-datasource",
+          "refresh": 1,
+          "regex": "/.*item_upload/",
+          "type": "datasource"
+        },
+        {
+          "current": {
+            "text": "",
+            "value": ""
+          },
+          "label": "CompanyID",
+          "name": "company_id",
+          "options": [
+            {
+              "selected": true,
+              "text": "",
+              "value": ""
+            }
+          ],
+          "query": "",
+          "type": "textbox"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-15m",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "timezone": "browser",
+    "title": "Статистика по загрузке товаров",
+    "uid": "be02vrntsg8owf",
+    "version": 48,
+    "weekStart": ""
+  }

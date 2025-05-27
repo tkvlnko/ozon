@@ -1,241 +1,212 @@
-import socket
 import time
+import os
 import random
+import re
 import json
 import threading
 from datetime import datetime
-from prometheus_client import start_http_server, Counter, Gauge
-from clickhouse_driver import Client
-import requests
+from prometheus_client import start_http_server
+
+
 from register_to_consul import register_to_consul
-from config import SAVE_COUNTER, UPDATE_COUNTER, ERROR_COUNTER
+from config import logger
 from compute_metrics import leader_election_loop
+from connect import get_client
 
-# -----------------------------
-# Leader Election Configuration
-# -----------------------------
-# CONSUL = "http://consul:8500"
-# LEADER_KEY = "microservice/leader"
-# SESSION_TTL = "30s"  # session Time-To-Live
-# RENEW_INTERVAL = 10  # seconds between renews
-
-# BASE = RENEW_INTERVAL  # 10
-# JITTER_FACTOR = 0.1  # 10%
-
-# -----------------------------
-# Prometheus Metrics Definitions
-# -----------------------------
-# SAVE_COUNTER = Counter("save_events_total", "Total number of SAVE events")
-# UPDATE_COUNTER = Counter("update_events_total", "Total number of UPDATE events")
-# ERROR_COUNTER = Counter("error_events_total", "Total number of ERROR events")
-
-# SAVE_GAUGE = Gauge("save_events_clickhouse", "Count of SAVE events in ClickHouse")
-# UPDATE_GAUGE = Gauge("update_events_clickhouse", "Count of UPDATE events in ClickHouse")
-# ERROR_GAUGE = Gauge("error_events_clickhouse", "Count of ERROR events in ClickHouse")
-# TOTAL_EVENTS_GAUGE = Gauge(
-#     "total_events_clickhouse", "Total count of events in ClickHouse"
-# )
-
-# globals for metrics thread control
-
-
-# stop_metrics = threading.Event()
-# metrics_thread = None
-
-
-
-# -----------------------------
-# Existing Logic
-# -----------------------------
-
-print("Time sleep begun", flush=True)
-time.sleep(20)
-print("process begun", flush=True)
-
-
-# module-level var to remember when we last printed
 _last_debug_time = 0.0
-_debug_interval = 3.0  # seconds
+_debug_interval = 3.0
 
-
-# def simulate_event():
-#     event_types = ["SAVE", "UPDATE", "ERROR"]
-#     event_type = random.choices(event_types, weights=[0.5, 0.4, 0.1])[0]
-#     now = datetime.now()
-#     seller_id = random.randint(1000, 9999)
-#     production_countries = ["CN", "US", "RU", "DE"]
-#     production_country = random.choice(production_countries)
-#     upload_method = "mass-create/json"
-#     upload_file_hash = hex(random.getrandbits(128))[2:]
-#     import_batch_id = random.randint(10000, 99999)
-#     num_media_files = random.randint(0, 5)
-#     has_media = random.choice([True, False])
-#     media_files = (
-#         [
-#             f"https://cdn.example.com/{random.randint(100000, 999999)}.jpg"
-#             for _ in range(num_media_files)
-#         ]
-#         if has_media
-#         else None
-#     )
-#     return {
-#         "item_id": random.randint(1000000000, 9999999999),
-#         "ts": int(now.timestamp() * 1e9),
-#         "event": event_type,
-#         "state": (
-#             "imported"
-#             if event_type == "SAVE"
-#             else ("updated" if event_type == "UPDATE" else "error")
-#         ),
-#         "attempt_id": f"{random.randint(1000, 9999)}|{random.randint(100000, 999999)}",
-#         "data": json.dumps(
-#             {
-#                 "info": "Simulated event data",
-#                 "seller_id": seller_id,
-#                 "production_country": production_country,
-#                 "upload_method": upload_method,
-#                 "upload_file_hash": upload_file_hash,
-#                 "import_batch_id": import_batch_id,
-#                 "media_files": media_files,
-#             }
-#         ),
-#     }
-
+ITEM_POOL = [random.randint(1_000_000_000, 9_999_999_999) for _ in range(1_000)]
+item_attempts = {}
+MAX_ACTIVE_ITEMS = 1_000
 
 
 def simulate_event():
     global _last_debug_time
 
-    event_types = ["SAVE", "UPDATE", "ERROR"]
-    event_type = random.choices(event_types, weights=[0.5, 0.4, 0.1])[0]
+    if len(item_attempts) < MAX_ACTIVE_ITEMS or not item_attempts:
+        item_id = random.choice(ITEM_POOL)
+        if item_id not in item_attempts:
+            item_attempts[item_id] = []
+    else:
+        try:
+            item_id = random.choice(list(item_attempts.keys()))
+        except IndexError:
+            item_id = random.choice(ITEM_POOL)
+            item_attempts[item_id] = []
+
     now = datetime.now()
-    seller_id = random.randint(1000, 9999)
+    ts_ns = int(now.timestamp() * 1e9)
+    item_attempts[item_id].append(ts_ns)
+
+    event_types = ["SAVE", "UPDATE", "ERROR"]
+    weights = [0.5, 0.4, 0.1]
+    event_type = random.choices(event_types, weights=weights)[0]
+
+    company_id = random.randint(1000, 9999)
+    category_id = random.randint(1, 500)
     production_countries = ["CN", "US", "RU", "DE"]
     production_country = random.choice(production_countries)
-    upload_method = "mass-create/json"
-    upload_file_hash = hex(random.getrandbits(128))[2:]
-    import_batch_id = random.randint(10000, 99999)
+
+    def generate_media_url() -> str:
+        domain_type = random.choices(
+            ["our", "external", "bad"],
+            weights=[0.5, 0.4, 0.1],  # можно менять веса
+            k=1,
+        )[0]
+
+        file_id = random.randint(100000, 999999)
+
+        if domain_type == "our":
+            domain = random.choice(["ozone.ru", "ozonusercontent.com"])
+        elif domain_type == "bad":
+            domain = "bad_hostname"
+        else:
+            domain = random.choice(
+                ["imgur.com", "unsplash.com", "cdn.otherhost.net", "example.com"]
+            )
+
+        return f"https://cdn.{domain}/{file_id}.jpg"
+
+    # Генерация списка
     num_media_files = random.randint(0, 5)
     has_media = random.choice([True, False])
+
     media_files = (
-        [
-            f"https://cdn.example.com/{random.randint(100000, 999999)}.jpg"
-            for _ in range(num_media_files)
-        ]
-        if has_media
-        else None
+        [generate_media_url() for _ in range(num_media_files)] if has_media else []
     )
 
-    event = {
-        "item_id": random.randint(1000000000, 9999999999),
-        "ts": int(now.timestamp() * 1e9),
-        "event": event_type,
-        "state": (
-            "imported"
-            if event_type == "SAVE"
-            else ("updated" if event_type == "UPDATE" else "error")
-        ),
-        "attempt_id": f"{random.randint(1000, 9999)}|{random.randint(100000, 999999)}",
-        "data": json.dumps(
-            {
-                "info": "Simulated event data",
-                "seller_id": seller_id,
-                "production_country": production_country,
-                "upload_method": upload_method,
-                "upload_file_hash": upload_file_hash,
-                "import_batch_id": import_batch_id,
-                "media_files": media_files,
-            }
-        ),
-    }
+    attempt_count = len(item_attempts[item_id])
+    if attempt_count >= 3:
+        is_created = random.random() < 0.8
+    elif attempt_count == 2:
+        is_created = random.random() < 0.4
+    else:
+        is_created = random.random() < 0.05
 
-    # throttle debug prints to once every _debug_interval seconds
+    event_type = (
+        "SAVE"
+        if is_created
+        else random.choices(["UPDATE", "ERROR"], weights=[0.7, 0.3])[0]
+    )
+
+    attempt_id = f"{random.randint(1000,9999)}|{random.randint(100000,999999)}"
+    request_id = f"{random.randint(100000,999999):x}"
+    origin = random.choice(["upload/ui", "upload/api", "update/manual"])
+    origin_id = str(random.randint(1, 100))
+
+    media_map = {}
+    url_by_media = {}
+    for url in media_files:
+        ext = url.rsplit(".", 1)[-1]
+        key = f"{ext}:{url}"
+        url_by_media[key] = url_by_media.get(key, 0) + 1
+
+    data = json.dumps(
+        {
+            "info": "Simulated event data",
+            "company_id": company_id,
+            "production_country": production_country,
+            "media_files": media_files,
+        }
+    )
+
     now_ts = time.time()
     if now_ts - _last_debug_time >= _debug_interval:
-        print(
-            f"[DEBUG {datetime.now().isoformat()}] "
-            f"event={event_type}, seller_id={seller_id}, country={production_country}, "
-            f"batch={import_batch_id}, media_files={len(media_files) if media_files else 0}"
+        logger.info(
+            f"event={event_type}, company_id={company_id}, country={production_country}"
         )
         _last_debug_time = now_ts
 
-    return event
+    if is_created:
+        up_ts = ts_ns + random.randint(5_000_000_000, 25_000_000_000)
+        del item_attempts[item_id]
+    else:
+        up_ts = 0
+
+    return {
+        "item_id": item_id,
+        "ts_ns": ts_ns,
+        "event": event_type,
+        "attempt_id": attempt_id,
+        "request_id": request_id,
+        "up_ts": up_ts,
+        "origin": origin,
+        "is_created": is_created,
+        "origin_id": origin_id,
+        "country": production_country,
+        "data": data,
+        "company_id": company_id,
+        "category_id": category_id,
+        "media": media_map,
+        "url_by_media": url_by_media,
+    }
 
 
-
-def process_event(event):
-    t = event.get("event")
-    if t == "SAVE":
-        SAVE_COUNTER.inc()
-    elif t == "UPDATE":
-        UPDATE_COUNTER.inc()
-    elif t == "ERROR":
-        ERROR_COUNTER.inc()
-
-
-# def compute_metrics():
-#     client = Client(host="clickhouse", port=9000, user="default", password="default")
-#     while not stop_metrics.is_set():
-#         try:
-#             save_count = client.execute(
-#                 "SELECT count() FROM product_load_events WHERE event='SAVE'"
-#             )[0][0]
-#             update_count = client.execute(
-#                 "SELECT count() FROM product_load_events WHERE event='UPDATE'"
-#             )[0][0]
-#             error_count = client.execute(
-#                 "SELECT count() FROM product_load_events WHERE event='ERROR'"
-#             )[0][0]
-#             total_count = client.execute("SELECT count() FROM product_load_events")[0][
-#                 0
-#             ]
-#             SAVE_GAUGE.set(save_count)
-#             UPDATE_GAUGE.set(update_count)
-#             ERROR_GAUGE.set(error_count)
-#             TOTAL_EVENTS_GAUGE.set(total_count)
-#         except Exception as e:
-#             print("Error computing metrics:", e, flush=True)
-#         stop_metrics.wait(10)
+def process_event(event: dict[str, str]) -> None:
+    #     t = event.get("event")
+    #     if t == "SAVE":
+    #         SAVE_COUNTER.inc()
+    #     elif t == "UPDATE":
+    #         UPDATE_COUNTER.inc()
+    #     elif t == "ERROR":
+    #         ERROR_COUNTER.inc()
+    pass
 
 
-def main():
+def main() -> None:
+    logger.info("🕒 Time sleep begun")
+    time.sleep(25)
+
     start_http_server(84)
-    print("Prometheus metrics server started on port 84", flush=True)
-    client = Client(host="clickhouse", port=9000, user="default", password="default")
-    client.execute(
-        """
-        CREATE TABLE IF NOT EXISTS product_load_events (
-            ts DateTime64(9),
-            item_id UInt64,
-            event String,
-            state String,
-            attempt_id String,
-            data String
-        ) ENGINE = MergeTree() ORDER BY ts
-    """
-    )
+    logger.info("📊 Prometheus metrics server started on port 84")
+
+    register_to_consul()
+    # threading.Thread(target=leader_election_loop, daemon=True).start()
+
+    try:
+        client = get_client()
+    except Exception as e:
+        logger.exception("❌ Trying to connect to ClickHouse")
+
     while True:
         ev = simulate_event()
         process_event(ev)
-        ev_dt = datetime.fromtimestamp(ev["ts"] / 1e9)
-        client.execute(
-            "INSERT INTO product_load_events (ts, item_id, event, state, attempt_id, data) VALUES",
-            [
-                (
-                    ev_dt,
-                    ev["item_id"],
-                    ev["event"],
-                    ev["state"],
-                    ev["attempt_id"],
-                    ev["data"],
-                )
-            ],
-        )
+        try:
+            client.execute(
+                "INSERT INTO item_upload.company_statistic_daily_buffer VALUES",
+                [
+                    (
+                        ev["ts_ns"],
+                        ev["item_id"],
+                        ev["company_id"],
+                        ev["category_id"],
+                        ev["origin"],
+                        ev["media"],
+                        ev["country"],
+                        ev["url_by_media"],
+                    )
+                ],
+            )
+            client.execute(
+                "INSERT INTO item_upload.company_statistic_status_daily_buffer VALUES",
+                [
+                    (
+                        ev["ts_ns"],
+                        ev["item_id"],
+                        ev["event"] == "SAVE",
+                        ev["up_ts"],
+                    )
+                ],
+            )
+
+        except Exception as e:
+            logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")
+            time.sleep(10)
+
         time.sleep(0.1)
 
 
 if __name__ == "__main__":
-    register_to_consul()
-    # старт элекшн-лупа в фоне
     threading.Thread(target=leader_election_loop, daemon=True).start()
     main()

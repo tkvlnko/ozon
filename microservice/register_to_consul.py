@@ -1,5 +1,6 @@
 import socket
 import requests
+from config import logger
 
 
 def register_to_consul():
@@ -12,5 +13,8 @@ def register_to_consul():
         "Tags": ["metrics"],
         "Check": {"HTTP": f"http://{instance_id}:84/metrics", "Interval": "10s"},
     }
-    requests.put("http://consul:8500/v1/agent/service/register", json=svc)
-    print(f"Registered {svc['ID']} to Consul", flush=True)
+    try:
+        requests.put("http://consul:8500/v1/agent/service/register", json=svc)
+        logger.info(f"✅ Registered {svc['ID']} to Consul")
+    except Exception as e:
+        logger.exception("❌ Failed to register service to Consul")

@@ -1,0 +1,49 @@
+apiVersion: 1
+# datasources:
+#   - name: ClickHouseCluster
+#     type: vertamedia-clickhouse-datasource
+#     uid: adzva9wij30g0e
+#     access: proxy
+#     isDefault: true
+
+#     # Точка входа (любой из узлов) — всё равно под капотом будет балансировка по списку ниже
+#     url: http://clickhouse-1:8123
+
+#     # База по умолчанию
+#     database: item_upload # item_upload
+
+#     # Учётки
+#     user: default
+#     secureJsonData:
+#       password: default
+
+#     jsonData:
+#       # Список HTTP-эндпоинтов всех шардов
+#       servers:
+#         - url: http://clickhouse-1:8123
+#         - url: http://clickhouse-2:8123
+#         - url: http://clickhouse-3:8123
+#         - url: http://clickhouse-4:8123
+
+#       # Пропустить верификацию TLS (не обязательно, если у вас чисто HTTP)
+#       tlsSkipVerify: true
+
+#       # Таймауты запросов (в секундах)
+#       timeoutSeconds: 30
+
+datasources:
+  - name: grafana-clickhouse-ds
+    type: grafana-clickhouse-datasource
+    access: proxy
+    orgId: 1
+    jsonData:
+      protocol: native
+      defaultDatabase: item_upload
+      host: clickhouse-1
+      port: 9000
+      maxOpenConns: 50
+      maxIdleConns: 25
+      connMaxLifetime: 300
+    secureJsonData:
+      username: default
+      password: default
