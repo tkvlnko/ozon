@@ -14,9 +14,6 @@ stop_metrics = threading.Event()
 metrics_thread = None
 
 
-# -----------------------------
-# Leader Election Helpers
-# -----------------------------
 def create_session():
     payload = {
         "Name": f"leader-election-{socket.gethostname()}",
@@ -121,162 +118,61 @@ def compute_metrics():
     while not stop_metrics.is_set():
         try:
 
+            # 1) Unique sellers
             unique_sellers = client.execute(
-                """select
-                    uniq(company_id)
-                        from company_statistic_daily_all
-                where
-                fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), interval 1 day)"""
+                """
+                SELECT uniq(company_id)
+                FROM company_statistic_daily_all
+                WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 day)
+                """
             )[0][0]
             GAUGES["unique_sellers"].set(unique_sellers)
 
-            first_time_sellers = client.execute(
-                "SELECT uniqIf(company_id, frst = al) "
-                "FROM ("
-                "SELECT "
-                "fromUnixTimestamp64Nano(ts) AS newTS, "
-                "company_id, "
-                "sum(c1) AS frst, "
-                "sum(arraySum(mapValues(c2))) AS al "
-                "FROM ("
-                "SELECT "
-                "fromUnixTimestamp64Nano(ts) AS newTS, "
-                "company_id, "
-                "uniqMerge(first_time) AS c1, "
-                "mapFilter((k, v) -> (k NOT LIKE '%update/%'), uniqMapMerge(origins)) AS c2 "
-                "FROM company_statistic_monthly "
-                "WHERE $__dateFilter(newTS) "
-                "GROUP BY newTS, company_id"
-                ") t0 "
-                "GROUP BY newTS, company_id"
-                ") t "
-                "GROUP BY newTS"
-            )[0][0]
-            GAUGES["first_time_sellers"].set(first_time_sellers)
+            # 2) Avg, Stddev и Upper Bound for attempt times
+            (
+                avg_,
+                stddev_,
+            ) = client.execute(
+                """
+                SELECT
+                    avg(attempt),
+                    stddevPop(attempt)
+                FROM attempt_create_time_all
+                """
+            )[0]
+            GAUGES["avg_attempt"].set(avg_)
+            GAUGES["stddev_attempt"].set(stddev_)
+            GAUGES["upper_bound_attempt"].set(avg_ + 3 * stddev_)
 
-            repeat_sellers = client.execute(
-                "SELECT uniqIf(company_id, frst = 0) "
-                "FROM ("
-                "SELECT "
-                "fromUnixTimestamp64Nano(ts) AS newTS, "
-                "company_id, "
-                "sum(c1) AS frst "
-                "FROM ("
-                "SELECT "
-                "fromUnixTimestamp64Nano(ts) AS newTS, "
-                "company_id, "
-                "uniqMerge(first_time) AS c1 "
-                "FROM company_statistic_monthly "
-                "WHERE $__dateFilter(newTS) "
-                "GROUP BY newTS, company_id"
-                ") t0 "
-                "GROUP BY newTS, company_id"
-                ") t"
-            )[0][0]
-            GAUGES["repeat_sellers"].set(repeat_sellers)
+            # 3) Считаем failure_rate за последнюю минуту
+            failure_rate = client.execute(
+                    """
+                    SELECT
+                    sum(if(is_created, 0, 1)) * 100.0 / count()
+                    FROM attempt_create_time_all
+                    WHERE date_create >= now() - INTERVAL 1 MINUTE
+                        """
+                    )[0][0]
+            GAUGES["failure_rate"].set(failure_rate)
 
-            avg_full_time = client.execute(
-                "SELECT avg(full_time) "
-                "FROM attempt_create_time "
-                "WHERE $__timeFilter(date_create)"
-            )[0][0]
-            GAUGES["avg_full_time"].set(avg_full_time)
+            rows = client.execute("""
+                SELECT
+                if(country != 'RU', 'Глобал', 'РФ') AS segment,
+                uniq(item_id) AS cnt
+                FROM attempt_create_time_all
+                WHERE is_created
+                AND date_create >= now() - INTERVAL 1 MINUTE
+                GROUP BY segment
+            """)
 
-            stddev_full_time = client.execute(
-                "SELECT stddevPop(full_time) "
-                "FROM attempt_create_time "
-                "WHERE $__timeFilter(date_create)"
-            )[0][0]
-            GAUGES["stddev_full_time"].set(stddev_full_time)
+            # Сброс прошлых значений, чтобы не держать старые лэйблы
+            GAUGES["created_items"].clear()
 
-            upper_bound_full_time = client.execute(
-                "SELECT avg(full_time) + 3 * stddevPop(full_time) "
-                "FROM attempt_create_time "
-                "WHERE $__timeFilter(date_create)"
-            )[0][0]
-            GAUGES["upper_bound_full_time"].set(upper_bound_full_time)
-
-            items_created = client.execute(
-                "SELECT uniq(item_id) " "FROM attempt_create_time " "WHERE is_created"
-            )[0][0]
-            GAUGES["items_created"].set(items_created)
-
-            total_attempts = client.execute(
-                "SELECT sum(originRow.2) "
-                "FROM ("
-                "SELECT company_id, arrayJoin(uniqMapMerge(tryItemOrigins)) AS originRow "
-                "FROM item_change_log_stat "
-                "WHERE fromUnixTimestamp64Nano(ts) >= toStartOfInterval(now(), INTERVAL 1 DAY) "
-                "GROUP BY company_id"
-                ") t"
-            )[0][0]
-            GAUGES["total_attempts"].set(total_attempts)
-
-            p90_load_time = client.execute(
-                "WITH quantileTiming(0.90)(cnt) AS avg_load_time "
-                "SELECT "
-                "toStartOfInterval(hour, INTERVAL 30 MINUTE) AS at, "
-                "(avg_load_time / lagInFrame(avg_load_time) OVER (ORDER BY at) - 1) * -100 AS pct_change "
-                "FROM ("
-                "SELECT toStartOfMinute(date_create) AS hour, uniq(item_id) AS cnt "
-                "FROM attempt_create_time "
-                "WHERE $__timeFilter(date_create) AND is_created "
-                "GROUP BY hour ORDER BY hour"
-                ") t0 "
-                "GROUP BY at ORDER BY at"
-            )[0][1]
-            GAUGES["p90_load_time"].set(p90_load_time)
-
-            top_attempts_per_seller = client.execute(
-                "SELECT toDate(newTS) AS day, company_id, attempts, originAttempts "
-                "FROM ("
-                "SELECT "
-                "toStartOfInterval(fromUnixTimestamp64Nano(ts), INTERVAL 1 DAY) AS newTS, "
-                "company_id, "
-                "arraySum(mapValues(uniqMapMerge(origins))) AS attempts, "
-                "mapSort((k,v) -> -v, uniqMapMerge(origins)) AS originAttempts, "
-                "row_number() OVER (PARTITION BY newTS ORDER BY attempts DESC) AS rankAttempts "
-                "FROM item_change_log_stat "
-                "GROUP BY newTS, company_id"
-                ") t "
-                "WHERE $__dateFilter(t.newTS) AND rankAttempts <= 10 "
-                "ORDER BY t.newTS DESC, rankAttempts "
-                "LIMIT 100"
-            )
-            GAUGES["top_attempts_per_seller"].set(top_attempts_per_seller)
+            # Устанавливаем текущее значение по лэйблам
+            for segment, cnt in rows:
+                GAUGES["created_items"].labels(segment=segment).set(cnt)
 
         except Exception as e:
             logger.exception("❌ Error computing metrics")
 
         stop_metrics.wait(10)
-
-
-# def compute_metrics_old():
-#     # client = Client(host="clickhouse", port=9000, user="default", password="default")
-#     host = os.getenv("CLICKHOUSE_HOST", "clickhouse-1")
-#     port = int(os.getenv("CLICKHOUSE_PORT", 9000))
-#     client = Client(
-#         host=host, port=port, user="default", password="default", database="item_upload"
-#     )
-#     while not stop_metrics.is_set():
-#         # try:
-#         #     save_count = client.execute(
-#         #         "SELECT count() FROM product_load_events WHERE event='SAVE'"
-#         #     )[0][0]
-#         #     update_count = client.execute(
-#         #         "SELECT count() FROM product_load_events WHERE event='UPDATE'"
-#         #     )[0][0]
-#         #     error_count = client.execute(
-#         #         "SELECT count() FROM product_load_events WHERE event='ERROR'"
-#         #     )[0][0]
-#         #     total_count = client.execute("SELECT count() FROM product_load_events")[0][
-#         #         0
-#         #     ]
-#         #     SAVE_GAUGE.set(save_count)
-#         #     UPDATE_GAUGE.set(update_count)
-#         #     ERROR_GAUGE.set(error_count)
-#         #     TOTAL_EVENTS_GAUGE.set(total_count)
-#         # except Exception as e:
-#         #     print("Error computing metrics:", e, flush=True)
-#         # stop_metrics.wait(10)
-#         pass

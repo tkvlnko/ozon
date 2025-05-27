@@ -330,10 +330,10 @@ SELECT
     csd.origin                                  AS origin,
     any(cssd.is_created)                        AS is_created,
     if(
-      any(cssd.is_created),
-      ( maxIf(cssd.up_ts, cssd.is_created) - min(csd.ts) ) / 1e9,
-      0
-    )                                           AS attempt,
+  maxIf(cssd.up_ts, cssd.up_ts>0) > 0,
+  ( maxIf(cssd.up_ts, cssd.up_ts>0) - min(csd.ts) )/1e9,
+  0
+) AS attempt,
     greatest(
   if(
     any(cssd.is_created) AND maxIf(cssd.up_ts, cssd.is_created) > 0,

@@ -17,59 +17,30 @@ CH_PORT = 9000
 
 
 GAUGES = {
-    # 1) События SAVE/UPDATE из product_load_events
-    "save_count": Gauge(
-        "product_load_events_save_count",
-        "Count of product_load_events where event = 'SAVE'",
-    ),
-    "update_count": Gauge(
-        "product_load_events_update_count",
-        "Count of product_load_events where event = 'UPDATE'",
-    ),
-    # 2) Уникальные продавцы за период (company_statistic_monthly) :contentReference[oaicite:0]{index=0}
     "unique_sellers": Gauge(
-        "company_statistic_monthly_unique_sellers",
-        "Unique count of company_id in company_statistic_monthly over the time filter",
+        "company_statistic_daily_unique_sellers",
+        "Unique count of company_id in company_statistic_daily_all over the last day",
     ),
-    # 3) Продавцы с первого раза (frst = al) :contentReference[oaicite:1]{index=1}
-    "first_time_sellers": Gauge(
-        "company_statistic_monthly_first_time_sellers",
-        "Unique count of company_id where frst = al in company_statistic_monthly over the time filter",
+    "avg_attempt": Gauge(
+        "company_statistic_daily_avg_attempt_time",
+        "Average attempt time in attempt_create_time_all over the last day",
     ),
-    # 4) Продавцы повторно (frst = 0) :contentReference[oaicite:2]{index=2}
-    "repeat_sellers": Gauge(
-        "company_statistic_monthly_repeat_sellers",
-        "Unique count of company_id where frst = 0 in company_statistic_monthly over the time filter",
+    "stddev_attempt": Gauge(
+        "company_statistic_daily_stddev_attempt_time",
+        "Population standard deviation of attempt time over the last day",
     ),
-    # 5) Среднее время создания товара за период :contentReference[oaicite:3]{index=3}
-    "avg_full_time": Gauge(
-        "attempt_create_time_avg_full_time",
-        "Average full_time from attempt_create_time over the time filter",
+    "upper_bound_attempt": Gauge(
+        "company_statistic_daily_upper_bound_time",
+        "Upper bound (mean + 3·stddev) of attempt time over the last day",
     ),
-    # 6) Стандартное отклонение времени создания :contentReference[oaicite:4]{index=4}
-    "stddev_full_time": Gauge(
-        "attempt_create_time_stddev_full_time",
-        "Population standard deviation of full_time from attempt_create_time over the time filter",
+    "failure_rate": Gauge(
+        "attempt_create_time_all_failure_rate_percent",
+        "Percentage of failed attempts (is_created = false) over the last minute",
     ),
-    # 7) Верхняя граница (avg + 3·stddev) :contentReference[oaicite:5]{index=5}
-    "upper_bound_full_time": Gauge(
-        "attempt_create_time_upper_bound_full_time",
-        "Upper bound (avg + 3*stddev) of full_time from attempt_create_time over the time filter",
-    ),
-    # 8) Уникальные товары, созданные (is_created) :contentReference[oaicite:6]{index=6}
-    "items_created": Gauge(
-        "attempt_create_time_items_created",
-        "Unique count of item_id where is_created = 1 in attempt_create_time",
-    ),
-    # 9) Сумма попыток за последние сутки :contentReference[oaicite:7]{index=7}
-    "total_attempts": Gauge(
-        "item_change_log_stat_total_attempts_last_day",
-        "Sum of originRow.2 from item_change_log_stat over the last day",
-    ),
-    # 10) 90-й процентиль времени загрузки :contentReference[oaicite:8]{index=8}
-    "p90_load_time": Gauge(
-        "attempt_create_time_load_time_90th_percentile",
-        "90th percentile of cnt metric (load time) from attempt_create_time over the time filter",
+    "created_items": Gauge(
+        "attempt_create_time_all_created_items_total",
+        "Count of unique items created in the last minute, by segment",
+        ["segment"],
     ),
 }
 

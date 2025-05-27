@@ -52,7 +52,7 @@ def simulate_event():
         domain_type = random.choices(
             ["our", "external", "bad"],
             weights=[0.5, 0.4, 0.1],  # можно менять веса
-            k=1
+            k=1,
         )[0]
 
         file_id = random.randint(100000, 999999)
@@ -62,7 +62,9 @@ def simulate_event():
         elif domain_type == "bad":
             domain = "bad_hostname"
         else:
-            domain = random.choice(["imgur.com", "unsplash.com", "cdn.otherhost.net", "example.com"])
+            domain = random.choice(
+                ["imgur.com", "unsplash.com", "cdn.otherhost.net", "example.com"]
+            )
 
         return f"https://cdn.{domain}/{file_id}.jpg"
 
@@ -70,8 +72,9 @@ def simulate_event():
     num_media_files = random.randint(0, 5)
     has_media = random.choice([True, False])
 
-    media_files = [generate_media_url() for _ in range(num_media_files)] if has_media else []
-
+    media_files = (
+        [generate_media_url() for _ in range(num_media_files)] if has_media else []
+    )
 
     attempt_count = len(item_attempts[item_id])
     if attempt_count >= 3:
