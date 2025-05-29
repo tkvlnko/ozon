@@ -204,7 +204,7 @@ def main() -> None:
             logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")
             time.sleep(10)
 
-        time.sleep(0.1)
+        time.sleep(1)
 
 
 if __name__ == "__main__":
