@@ -1,5 +1,4 @@
 <yandex>
-  <!-- Legacy tag that DDLWorker expects -->
   <zookeeper>
     <node index="1">
       <host>zookeeper</host>

@@ -7,7 +7,7 @@ import os
 import threading
 from datetime import datetime
 from clickhouse_driver import Client
-from config import logger, GAUGES, SESSION_TTL, CONSUL, LEADER_KEY, BASE, JITTER_FACTOR
+from config import logger, GAUGES, SESSION_TTL, CONSUL, LEADER_KEY, BASE, JITTER_FACTOR, COMPUTE_METRICS_INTERVAL
 from connect import get_client
 
 stop_metrics = threading.Event()
@@ -36,7 +36,7 @@ def acquire_lock(session_id):
         params = {"acquire": session_id}
         res = requests.put(
             f"{CONSUL}/v1/kv/{LEADER_KEY}", params=params, data=socket.gethostname()
-        )
+        ) # Если в данный момент никто не владеет этим ключом (или предыдущая сессия истекла и ключ удалился), Consul установит значение (имя хоста) и вернёт True.
         res.raise_for_status()
         got = res.json()
         logger.debug(
@@ -175,4 +175,4 @@ def compute_metrics():
         except Exception as e:
             logger.exception("❌ Error computing metrics")
 
-        stop_metrics.wait(10)
+        stop_metrics.wait(COMPUTE_METRICS_INTERVAL)
