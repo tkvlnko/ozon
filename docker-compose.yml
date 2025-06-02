@@ -61,7 +61,7 @@ services:
         kafka-topics --bootstrap-server kafka:9092 \
                      --create \
                      --topic item_events \
-                     --partitions 16 \
+                     --partitions 4 \
                      --replication-factor 1
         echo "Топик item_events создан."
         # 4) После создания топика бесцельно ждем, чтобы контейнер не упал
