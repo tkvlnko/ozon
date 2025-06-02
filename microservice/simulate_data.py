@@ -6,12 +6,13 @@ import json
 import threading
 from datetime import datetime
 from prometheus_client import start_http_server
+from kafka import KafkaProducer
 
 
 from register_to_consul import register_to_consul
-from config import logger
+from config import logger, METRICS_PORT
 from compute_metrics import leader_election_loop
-from connect import get_client
+from connect import get_clickhouse_client, get_kafka_producer
 
 _last_debug_time = 0.0
 _debug_interval = 3.0
@@ -158,48 +159,22 @@ def main() -> None:
     logger.info("🕒 Time sleep begun")
     time.sleep(25)
 
-    start_http_server(84)
-    logger.info("📊 Prometheus metrics server started on port 84")
+    start_http_server(METRICS_PORT)
+    logger.info(f"📊 Prometheus metrics server started on port {METRICS_PORT}")
 
     register_to_consul()
-    # threading.Thread(target=leader_election_loop, daemon=True).start()
 
     try:
-        client = get_client()
+        producer = get_kafka_producer()  # по умолчанию "kafka:9092"
+        topic = "item_events"
     except Exception as e:
-        logger.exception("❌ Trying to connect to ClickHouse")
+        logger.error("❌ Trying to connect to Kafka")
 
     while True:
         ev = simulate_event()
-        process_event(ev)
+        # process_event(ev)
         try:
-            client.execute(
-                "INSERT INTO item_upload.company_statistic_daily_buffer VALUES",
-                [
-                    (
-                        ev["ts_ns"],
-                        ev["item_id"],
-                        ev["company_id"],
-                        ev["category_id"],
-                        ev["origin"],
-                        ev["media"],
-                        ev["country"],
-                        ev["url_by_media"],
-                    )
-                ],
-            )
-            client.execute(
-                "INSERT INTO item_upload.company_statistic_status_daily_buffer VALUES",
-                [
-                    (
-                        ev["ts_ns"],
-                        ev["item_id"],
-                        ev["event"] == "SAVE",
-                        ev["up_ts"],
-                    )
-                ],
-            )
-
+            producer.send(topic, ev)
         except Exception as e:
             logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")
             time.sleep(10)

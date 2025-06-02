@@ -24,6 +24,52 @@ services:
     networks: 
       - monitoring 
 
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - monitoring
+
+  kafka-init:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka-init
+    depends_on:
+      - kafka
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        # 1) Ждем, пока Kafka "проснётся" и даст ответ на порт 9092
+        echo "Ждем, пока Kafka станет готова..."
+        until kafka-topics --bootstrap-server kafka:9092 --list >/dev/null 2>&1; do
+          sleep 2
+        done
+        # 2) Удаляем топик, если он был (чтобы избежать ошибок, если пересобираем снова)
+        kafka-topics --bootstrap-server kafka:9092 --delete --topic item_events 2>/dev/null || true
+        # 3) Создаем топик с 4 партициями и RF=1
+        echo "Создаём topic item_events"
+        kafka-topics --bootstrap-server kafka:9092 \
+                     --create \
+                     --topic item_events \
+                     --partitions 1 \
+                     --replication-factor 1
+        echo "Топик item_events создан."
+        # 4) После создания топика бесцельно ждем, чтобы контейнер не упал
+        #    (или можно просто exit 0, если хотите, чтобы он завершился)
+        sleep 300
+    networks:
+      - monitoring
+
   prometheus:
     image: prom/prometheus:v2.45.0
     container_name: prometheus
@@ -149,6 +195,7 @@ services:
     depends_on:
       - clickhouse-1
       - consul
+      - kafka
     deploy:
       replicas: 3
   

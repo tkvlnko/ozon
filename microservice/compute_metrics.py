@@ -8,7 +8,7 @@ import threading
 from datetime import datetime
 from clickhouse_driver import Client
 from config import logger, GAUGES, SESSION_TTL, CONSUL, LEADER_KEY, BASE, JITTER_FACTOR, COMPUTE_METRICS_INTERVAL
-from connect import get_client
+from connect import get_clickhouse_client
 
 stop_metrics = threading.Event()
 metrics_thread = None
@@ -110,7 +110,7 @@ def leader_election_loop():
 
 def compute_metrics():
     try:
-        client = get_client()
+        client = get_clickhouse_client()
     except Exception as e:
         logger.exception("❌ Failed to connect to ClickHouse in compute_metrics")
         return
