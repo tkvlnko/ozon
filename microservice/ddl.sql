@@ -380,3 +380,79 @@ GROUP BY
     csd.company_id,
     csd.country
 ;
+
+
+
+-- 1. Таблица-«консьюмер» из Kafka
+CREATE TABLE IF NOT EXISTS item_upload.kafka_item_events
+ON CLUSTER local_cluster
+(
+    ts_ns        UInt64,
+    item_id      UInt64,
+    company_id   UInt64,
+    category_id  UInt64,
+    origin       String,
+    media        Map(String, UInt64),
+    country      Nullable(String),
+    url_by_media Map(String, UInt64),
+    event        String,
+    attempt_id   String,
+    request_id   String,
+    up_ts        UInt64,
+    is_created   UInt8,
+    origin_id    String,
+    data         String
+)
+ENGINE = Kafka
+SETTINGS
+    kafka_broker_list = 'kafka:9092',
+    kafka_topic_list = 'item_events',
+    kafka_group_name = 'ch_item_upload_consumer',
+    kafka_format = 'JSONEachRow',
+    kafka_num_consumers = 1;  
+
+-- 2. MV для company_statistic_daily_buffer
+CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_kafka_to_daily_buffer
+ON CLUSTER local_cluster
+TO item_upload.company_statistic_daily_buffer
+AS
+SELECT
+    ts_ns                  AS ts,
+    item_id,
+    company_id,
+    category_id,
+    origin,
+    media,
+    country,
+    url_by_media
+FROM item_upload.kafka_item_events;
+-- WHERE isLeaderReplica();
+
+
+-- 3. MV для company_statistic_status_daily_buffer
+CREATE MATERIALIZED VIEW IF NOT EXISTS item_upload.mv_kafka_to_status_buffer
+ON CLUSTER local_cluster
+TO item_upload.company_statistic_status_daily_buffer
+AS
+SELECT
+    ts_ns                  AS ts,
+    item_id,
+    CAST(is_created, 'Bool') AS is_created,
+    up_ts
+FROM item_upload.kafka_item_events;
+-- WHERE isLeaderReplica();
+
+
+SELECT
+    hostName()                                 AS host,          
+    consumer_id,                                               
+    a.topic                                     AS topic,        
+    a.partition_id                              AS part,         
+    a.current_offset                            AS cur_offset,   
+    last_poll_time,                                            
+    num_messages_read,                                         
+
+FROM clusterAllReplicas('local_cluster', system.kafka_consumers)
+ARRAY JOIN assignments AS a       
+WHERE `table` = 'kafka_item_events'
+ORDER BY host, part;

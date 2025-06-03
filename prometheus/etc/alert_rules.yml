@@ -1,0 +1,84 @@
+# ┌─────────────────────────────────────────────────────────────────┐
+# │ Alert rules defining various thresholds for item upload metrics │
+# │ (failure rate, attempt time, unique sellers, etc.)              │
+# └─────────────────────────────────────────────────────────────────┘
+
+groups:
+  - name: item_upload_alerts
+
+    rules:
+      - alert: HighFailureRate
+        expr: attempt_create_time_all_failure_rate_percent > 50
+        for: 5m
+        labels:
+          severity: critical
+          component: item_upload
+        annotations:
+          summary: High failure rate in item uploads ({{ $value }}% for 5m)
+          description: |
+            The percentage of failed upload attempts (is_created = false)
+            has exceeded 50% over the last 5 minutes.
+
+      - alert: HighAverageAttemptTime
+        expr: company_statistic_daily_avg_attempt_time > 30
+        for: 5m
+        labels:
+          severity: warning
+          component: item_upload
+        annotations:
+          summary: High average attempt time (>{{ $value }}s for 5m)
+          description: |
+            The average time to perform the first creation attempt (in seconds)
+            has stayed above 30 seconds for at least 5 minutes.
+
+      - alert: HighAttemptTimeStdDev
+        expr: company_statistic_daily_stddev_attempt_time > 20
+        for: 10m
+        labels:
+          severity: warning
+          component: item_upload
+        annotations:
+          summary: High standard deviation of attempt time (>{{ $value }} for 10m)
+          description: |
+            The standard deviation of attempt times has exceeded 20 seconds
+            for the last 10 minutes, indicating highly variable performance.
+
+      - alert: FewUniqueSellers
+        expr: company_statistic_daily_unique_sellers < 100
+        for: 10m
+        labels:
+          severity: warning
+          component: item_upload
+        annotations:
+          summary: Number of unique sellers in the last day is very low (<100)
+          description: |
+            Over the past day, fewer than 100 distinct sellers have uploaded items.
+
+      - alert: HighUpperBoundAttemptTime
+        expr: company_statistic_daily_upper_bound_time > 60
+        for: 5m
+        labels:
+          severity: warning
+          component: item_upload
+        annotations:
+          summary: High upper bound for attempt time (>{{ $value }}s for 5m)
+          description: |
+            The upper bound (mean + 3·stddev) of attempt times has remained above 60 seconds
+            for at least 5 minutes.
+
+      - alert: NoItemsCreatedInSegment
+        expr: |
+          sum(
+            attempt_create_time_all_created_items_total{segment="Global"}
+          ) == 0 OR sum(
+            attempt_create_time_all_created_items_total{segment="RU"}
+          ) == 0
+        for: 10m
+        labels:
+          severity: critical
+          component: item_upload
+        annotations:
+          summary: No items created in one of the segments for 10 minutes
+          description: |
+            The total number of unique items created in either the "Global" or "RU"
+            segment has dropped to zero for at least 10 minutes.

@@ -1,5 +1,12 @@
+# ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
+# │ This file configures Prometheus to load its alerting rules and discover which services to scrape.  │                                   │
+# └────────────────────────────────────────────────────────────────────────────────────────────────────┘
 global:
   scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
 
 scrape_configs:
   - job_name: "prometheus"
@@ -9,7 +16,7 @@ scrape_configs:
   - job_name: "from-consul"
     consul_sd_configs:
       - server: "consul:8500"
-        services: ["microservice"]    
+        services: ["microservice"]
 
     metrics_path: /metrics
 

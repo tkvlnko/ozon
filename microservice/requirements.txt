@@ -1,0 +1,5 @@
+clickhouse-driver 
+prometheus_client 
+requests 
+kafka-python
+python-snappy
