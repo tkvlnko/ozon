@@ -35,7 +35,7 @@
 <details open>
 <summary style="font-size: 20px; font-weight: 600; text-decoration: underline">
 
-##### Statistics & key metrics in Grafana
+#### Statistics & key metrics in Grafana
 </summary> <br />
 
   
@@ -49,7 +49,7 @@
 <details open>
 <summary style="font-size: 20px; font-weight: 600; text-decoration: underline">
 
-##### Alert rules & metrics in Prometheus
+#### Alert rules & metrics in Prometheus
 </summary> <br />
 
 ![](demo/demo5.png)
@@ -59,7 +59,7 @@
 <details open>
 <summary style="font-size: 20px; font-weight: 600; text-decoration: underline">
 
-##### System runnung via Docker-compose
+#### System runnung via Docker-compose
 </summary> <br />
 
 ![](demo/demo7.png)
