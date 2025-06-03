@@ -69,7 +69,7 @@ def simulate_event():
 
         return f"https://cdn.{domain}/{file_id}.jpg"
 
-    # Генерация списка
+    # generation of list
     num_media_files = random.randint(0, 5)
     has_media = random.choice([True, False])
 
@@ -144,6 +144,7 @@ def simulate_event():
     }
 
 
+#this function was initially intended to process each event to update metrics (in Prometheus)
 def process_event(event: dict[str, str]) -> None:
     #     t = event.get("event")
     #     if t == "SAVE":
@@ -165,7 +166,7 @@ def main() -> None:
     register_to_consul()
 
     try:
-        producer = get_kafka_producer()  # по умолчанию "kafka:9092"
+        producer = get_kafka_producer()  
         topic = "item_events"
     except Exception as e:
         logger.error("❌ Trying to connect to Kafka")
@@ -179,7 +180,7 @@ def main() -> None:
             logger.error(f"❌😭 Problem with connection to ClickHouse: {str(e)[:200]}")
             time.sleep(10)
 
-        time.sleep(1)
+        time.sleep(0.1)
 
 
 if __name__ == "__main__":

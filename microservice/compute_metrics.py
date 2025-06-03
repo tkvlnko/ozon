@@ -36,7 +36,10 @@ def acquire_lock(session_id):
         params = {"acquire": session_id}
         res = requests.put(
             f"{CONSUL}/v1/kv/{LEADER_KEY}", params=params, data=socket.gethostname()
-        ) # Если в данный момент никто не владеет этим ключом (или предыдущая сессия истекла и ключ удалился), Consul установит значение (имя хоста) и вернёт True.
+        ) 
+        # if now nobody owns this key (or the previous session has expired and the key has been deleted), 
+        # Consul will set the value (hostname) and return True.
+
         res.raise_for_status()
         got = res.json()
         logger.debug(
@@ -144,7 +147,7 @@ def compute_metrics():
             GAUGES["stddev_attempt"].set(stddev_)
             GAUGES["upper_bound_attempt"].set(avg_ + 3 * stddev_)
 
-            # 3) Считаем failure_rate за последнюю минуту
+            # 3) failure_rate for the last minute
             failure_rate = client.execute(
                     """
                     SELECT
@@ -165,10 +168,10 @@ def compute_metrics():
                 GROUP BY segment
             """)
 
-            # Сброс прошлых значений, чтобы не держать старые лэйблы
+            # Deletion of old labels 
             GAUGES["created_items"].clear()
 
-            # Устанавливаем текущее значение по лэйблам
+            # Adding new labels
             for segment, cnt in rows:
                 GAUGES["created_items"].labels(segment=segment).set(cnt)
 
