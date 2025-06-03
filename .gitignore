@@ -2,5 +2,5 @@ clickhouse/data/
 grafana/data/
 prometheus/data/
 microservice/old/
-demo/
+
 
