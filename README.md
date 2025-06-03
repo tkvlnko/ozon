@@ -45,7 +45,7 @@
 </details>
 
 
-<details open>
+<details close>
 <summary style="font-size: 20px; font-weight: 600; text-decoration: underline"><strong>Alert rules &amp; metrics in Prometheus</strong></summary>
 </summary> <br />
 
@@ -53,7 +53,7 @@
 ![](demo/demo4.png)
 </details>
 
-<details open>
+<details close>
 <summary style="font-size: 20px; font-weight: 600; text-decoration: underline"><strong>System runnung via Docker-compose</strong></summary>
 <br />
 
