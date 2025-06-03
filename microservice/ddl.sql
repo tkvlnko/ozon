@@ -441,3 +441,18 @@ SELECT
     up_ts
 FROM item_upload.kafka_item_events;
 -- WHERE isLeaderReplica();
+
+
+SELECT
+    hostName()                                 AS host,          
+    consumer_id,                                               
+    a.topic                                     AS topic,        
+    a.partition_id                              AS part,         
+    a.current_offset                            AS cur_offset,   
+    last_poll_time,                                            
+    num_messages_read,                                         
+
+FROM clusterAllReplicas('local_cluster', system.kafka_consumers)
+ARRAY JOIN assignments AS a       
+WHERE `table` = 'kafka_item_events'
+ORDER BY host, part;

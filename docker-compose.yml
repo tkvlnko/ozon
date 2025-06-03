@@ -76,6 +76,7 @@ services:
     volumes:
       - ./prometheus/etc:/etc/prometheus
       - ./prometheus/data:/prometheus
+      - ./prometheus/etc/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -110,6 +111,7 @@ services:
     volumes:
       - ./clickhouse/node01/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       - ./clickhouse/data/clickhouse-1:/var/lib/clickhouse
+
       - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
       - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
       - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
@@ -122,6 +124,7 @@ services:
     volumes:
       - ./clickhouse/node02/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       - ./clickhouse/data/clickhouse-2:/var/lib/clickhouse
+
       - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
       - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
       - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
@@ -135,6 +138,7 @@ services:
     volumes:
       - ./clickhouse/node03/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       - ./clickhouse/data/clickhouse-3:/var/lib/clickhouse
+
       - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
       - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
       - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
@@ -147,6 +151,7 @@ services:
     volumes:
       - ./clickhouse/node04/macros.xml:/etc/clickhouse-server/config.d/macros.xml:ro
       - ./clickhouse/data/clickhouse-4:/var/lib/clickhouse
+      
       - ./clickhouse/config/cluster.xml:/etc/clickhouse-server/config.d/cluster.xml:ro
       - ./clickhouse/config/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
       - ./clickhouse/config/keeper.xml:/etc/clickhouse-server/config.d/keeper.xml:ro
@@ -158,14 +163,13 @@ services:
     networks:
       - monitoring
     depends_on:
-      - clickhouse-1            # первый узел кластера
+      - clickhouse-1            
     ports:
       - "3000:3000"          
     environment:
-      # логин/пароль по умолчанию
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
-      # ставим плагин ClickHouse (ID тот же, что указан в JSON)admin
+
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
       - GF_SQL_DATASOURCES_MAX_OPEN_CONNS_DEFAULT=150
       - GF_SQLDATASOURCE_MAX_OPEN_CONNS_DEFAULT=150
@@ -173,13 +177,10 @@ services:
       - GF_SQLDATASOURCE_MAX_CONN_LIFETIME_DEFAULT=14400
 
     volumes:
-      # данные Grafana
       - grafana_data:/var/lib/grafana
-      # авто-провиженинг
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
       - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
-      # JSON-дашборды
       - ./grafana/dashboards:/var/lib/grafana/dashboards
       - ./grafana/custom.ini:/etc/grafana/grafana.ini:ro
 
@@ -211,7 +212,7 @@ services:
       - /bin/sh
       - -c
       - |
-        # ждём открытия порта 9000
+        # wait for the port 9000 to open
         until clickhouse-client \
           --host clickhouse-1 \
           --user default \
@@ -220,7 +221,7 @@ services:
           sleep 1
         done
 
-        # применяем DDL
+        # apply DDL
         clickhouse-client \
           --host clickhouse-1 \
           --user default \
